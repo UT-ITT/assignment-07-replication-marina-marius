@@ -16,15 +16,15 @@ With these categories we selected 10 Papers and discussed their advantages and d
 
 > A shoutout goes to the "interactive paper tearing" paper (Ljemble et al. 2015) because it is so funny and hilarious. Unforunately not posible in the “two weeks” since *whisper* dont tell anyone, but we also have multiple other courses *whisper* (Now you need to *gasp*).
 
-But why now two Papers? Lets give you some Background first of the other papers that got killed one by one during our selection process...
+But why now two Papers? Lets give you some Background first of the other papers that got killed one by one during our conquest process...
 
 ### The unloved unchoosen Papers
-From our initial pool, we quickly realized that many papers failed our “two weeks, one laptop, zero lab hardware and not much recycling of old ITT assignments” test:
+From our initial pool, we quickly realized that many papers failed our “two weeks, one laptop, zero lab hardware and not being able to recycling much of old ITT assignments” test:
 - Some systems relied on special hardware setups, like multi-touch tables or custom sensors that we didn't build in the ITT course.
 - Others were complex full games / systems with multiple scenes, narrative structures, custom audio pipelines, or machine learning components that would be hard to replicate in 1–2 weeks.
 - A few were “this is super cool, but probably a whole project course on its own” in terms of implementation detail.
 
-For Example:
+**For Example:**
 The paper tearing simulation with sound models realistic tear geometry and procedural tearing sounds based on hand motion and cone-shaped deformations of paper.
 - Super cool, super funny, but too much (╥﹏╥)
 - So the judges ruled and the verdict was: “Love you, but you belong in my private side‑projects folder, not in the 2‑week ITT graveyard.”
