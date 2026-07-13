@@ -1,5 +1,5 @@
 import pyglet
-from buttons import Button
+from world.buttons import Button
 import config
 
 # Screen 0: Startmenu

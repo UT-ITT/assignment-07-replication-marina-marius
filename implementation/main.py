@@ -1,16 +1,16 @@
 import cv2
 import time
-import audio_input
-import gesture_tracking
+from input import audio_input
+from input import gesture_tracking
 
 import pyglet
 import config
-from state_manager import StateManager
-from state_startmenu import StartMenuState
-from state_overworld import OverworldState
-from state_dungeon import DungeonState
-from state_treasure import TreasureState
-from state_end import EndState
+from states.state_manager import StateManager
+from states.state_startmenu import StartMenuState
+from states.state_overworld import OverworldState
+from states.state_dungeon import DungeonState
+from states.state_treasure import TreasureState
+from states.state_end import EndState
 
 window = pyglet.window.Window(config.WIN_WIDTH, config.WIN_HEIGHT, config.WIN_TITLE)
 manager = StateManager(window)
