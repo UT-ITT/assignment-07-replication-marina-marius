@@ -1,6 +1,7 @@
 import pyglet
 from pyglet.window import key
 import config
+from world.tilemap import TileMap
 
 # Screen 2: Dungeon
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -16,11 +17,10 @@ class DungeonState:
         self.entity_group = pyglet.graphics.Group(order=1)
         self.ui_group = pyglet.graphics.Group(order=2)
 
-        # TODO: replace with tilemap.py rendering of the dungeon layout
-        self.background = pyglet.shapes.Rectangle(
-            0, 0, config.WIN_WIDTH, config.WIN_HEIGHT,
-            color=(30, 30, 40), batch=self.batch, group=self.bg_group,
+        self.tilemap = TileMap(
+            "assets/dungeon/Dungeon1.tmx", self.batch, self.bg_group
         )
+        self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
         # TODO: replace with shield.py (color/size/charge state)
         self.shield = pyglet.shapes.Circle(
