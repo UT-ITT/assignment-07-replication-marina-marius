@@ -20,6 +20,9 @@ class TileMap:
 
         # keep references around, otherwise pyglet garbage-collects the sprites
         self.sprites = []
+        # each tile is unscaled (x, y) in pixels, so fit_to() can rescale later
+        # without having to reload/rebuild anything
+        self._native_positions = []
 
         for layer in self.data.visible_layers:
             if not hasattr(layer, "tiles"):
@@ -41,7 +44,22 @@ class TileMap:
                     image, x=px, y=py, batch=batch, group=group
                 )
                 self.sprites.append(sprite)
+                self._native_positions.append((px, py))
 
         # TODO: walkability/collision isn't handled yet
-        # tag tiles missing with a custom property in Tiled (like "walkable") 
+        # tag tiles missing with a custom property in Tiled (like "walkable")
         # and read it via self.data.get_tile_properties_by_gid(gid) once movement needs it
+
+    def fit_to(self, target_width, target_height, center=True):
+
+        native_width = self.width_tiles * self.tile_width
+        native_height = self.height_tiles * self.tile_height
+        scale = min(target_width / native_width, target_height / native_height)
+
+        offset_x = (target_width - native_width * scale) / 2 if center else 0
+        offset_y = (target_height - native_height * scale) / 2 if center else 0
+
+        for sprite, (native_x, native_y) in zip(self.sprites, self._native_positions):
+            sprite.scale = scale
+            sprite.x = offset_x + native_x * scale
+            sprite.y = offset_y + native_y * scale
