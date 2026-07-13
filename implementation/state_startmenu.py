@@ -3,6 +3,9 @@ from buttons import Button
 import config
 
 # Screen 0: Startmenu
+# Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
+# Will add code comments in the end since this will be getting updated and I dont want to waste precise time
+# rewriting my funny comments over and over again :3
 
 class StartMenuState:
 
@@ -26,6 +29,7 @@ class StartMenuState:
         )
 
         self.hint_label = pyglet.text.Label(
+            # TODO: swap for a better catch phrase
             "P2: click/pinch the button below to continue",
             x=config.WIN_WIDTH // 2,
             y=config.WIN_HEIGHT // 2 + 80,
@@ -58,7 +62,7 @@ class StartMenuState:
 
     def on_mouse_press(self, x, y, button, modifiers):
         # TODO: replace with P2 gesture cursor + pinch check once
-        # gesture_tracking is wired in; mouse click stands in for now
+        # gesture tracking is wired in and mouse click stands in for now
         if self.continue_button.hit_test(x, y):
             self.continue_button.set_active(True)
             self.manager.set_state("overworld")
