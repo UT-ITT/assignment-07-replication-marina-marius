@@ -26,3 +26,22 @@ the `__init__.py` files in each package are (currently) just a super fancy comme
 2: Inside the dungeon with the enemies
 3: Outside the dungeon at the treasury (solve puzzle)
 4: Game over or game won screen (is displayed depending on where you die or after 3 if passed)
+
+## nowhere sprites 
+Sooo a problem we encountered was how to use tilemaps. Since in e.g. unite you have. atilemap editor (just load your stuff in in the right format and voila you can "draw" your map as you wish and put "objects" in and collision etc.). We totally forgot that we use pyglet ._.
+
+so we searched in the world wide webs and came across this gem: https://www.mapeditor.org
+
+> "Tiled is a 2D level editor that helps you develop the content of your game. Its primary feature is to edit tile maps of various forms, but it also supports free image placement as well as powerful ways to annotate your level with extra information used by the game. Tiled focuses on general flexibility while trying to stay intuitive."
+
+And with that we solved our Tilemap problem, only problem left is to learn how to use it ._. 
+
+
+
+## sources
+
+### assets
+- dungeon: https://free-game-assets.itch.io/free-2d-top-down-pixel-dungeon-asset-pack
+- chapell: https://craftpix.net/download/100511/
+- dungeon2: https://craftpix.net/download/80859/
+- ruin: https://craftpix.net/download/107610/
