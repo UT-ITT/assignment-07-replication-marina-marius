@@ -40,11 +40,16 @@ class OverworldState:
         self.gate_open = False
 
         self.hint_label = pyglet.text.Label(
-            "WASD: P1  |  Arrow keys: P2  |  E near gate to open, ENTER to enter",
-            x=20, y=config.WIN_HEIGHT - 30,
-            anchor_x="left", anchor_y="center",
-            font_size=14, color=config.TEXT_COLOR,
-            batch=self.batch, group=self.ui_group,
+            # TODO: dummy logic for nwo
+            "WASD: P1 | Arrow keys: P2 | E near gate to open, ENTER to enter",
+            x=20,
+            y=config.WIN_HEIGHT - 30,
+            anchor_x="left",
+            anchor_y="center",
+            font_size=14,
+            color=config.TEXT_COLOR,
+            batch=self.batch,
+            group=self.ui_group,
         )
 
         self.keys = key.KeyStateHandler()
