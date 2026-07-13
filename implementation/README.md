@@ -36,6 +36,17 @@ so we searched in the world wide webs and came across this gem: https://www.mape
 
 And with that we solved our Tilemap problem, only problem left is to learn how to use it ._. 
 
+**bug alarm**
+
+WHY WHY WHY 
+
+so apparently when you have infinite on than pyglet cant handle that, but nuh uuuuh I needed to uncheck it in titled but that would be too easy (something with the sprite layout was wrong so it took 30 minutes to fix that with shitty random online threads) and in the end the creater of the tiles was just to lazy to put water tiles under the wave tiles so e colored random tiles that were not in the layer and thats why i couldnt select the whole map shift the offset just to uncheck infinite and use it in pyglet
+
+lesson learned -> using a real game engine with sprite editor in future no more pyglet
+
++ because of ratio I added left and right on each side 6 additional tile columns ._.
+
+TODO for the other tilemaps too ahhh
 
 
 ## sources
