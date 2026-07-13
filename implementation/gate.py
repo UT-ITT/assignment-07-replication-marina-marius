@@ -1,0 +1,2 @@
+# here comes all gate logic (dont know actually if we need it seperately but would be i think easier to debug and look for stuff)
+# also normaly you would do everything seperately e.g. unity so why not here also hihi
