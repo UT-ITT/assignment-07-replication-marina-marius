@@ -2,11 +2,74 @@ import os
 os.environ['OPENCV_LOG_LEVEL'] = 'SILENT'
 import time
 import urllib.request
+import sys
 import cv2
 import mediapipe as mp
 import threading
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from ctypes import Structure, c_double, c_uint32, c_void_p, cdll
+
+
+class Button:
+    left = "left"
+
+
+if sys.platform == "darwin":
+    _core_graphics = cdll.LoadLibrary("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices")
+
+    class CGPoint(Structure):
+        _fields_ = [("x", c_double), ("y", c_double)]
+
+    _core_graphics.CGEventCreateMouseEvent.restype = c_void_p
+    _core_graphics.CGEventCreateMouseEvent.argtypes = [c_void_p, c_uint32, CGPoint, c_uint32]
+    _core_graphics.CGEventPost.argtypes = [c_uint32, c_void_p]
+
+    class Controller:
+        def __init__(self):
+            self._position = (0, 0)
+
+        @property
+        def position(self):
+            return self._position
+
+        @position.setter
+        def position(self, value):
+            x, y = int(value[0]), int(value[1])
+            self._position = (x, y)
+            point = CGPoint(x, y)
+            event = _core_graphics.CGEventCreateMouseEvent(0, 5, point, 0)
+            _core_graphics.CGEventPost(0, event)
+
+        def press(self, button):
+            if button == Button.left:
+                x, y = self._position
+                event = _core_graphics.CGEventCreateMouseEvent(0, 1, CGPoint(x, y), 0)
+                _core_graphics.CGEventPost(0, event)
+
+        def release(self, button):
+            if button == Button.left:
+                x, y = self._position
+                event = _core_graphics.CGEventCreateMouseEvent(0, 2, CGPoint(x, y), 0)
+                _core_graphics.CGEventPost(0, event)
+else:
+    class Controller:
+        def __init__(self):
+            self._position = (0, 0)
+
+        @property
+        def position(self):
+            return self._position
+
+        @position.setter
+        def position(self, value):
+            self._position = (int(value[0]), int(value[1]))
+
+        def press(self, button):
+            return None
+
+        def release(self, button):
+            return None
 
 # global variables for game access
 cursor_x = 0
@@ -56,50 +119,105 @@ def landmark_to_screen(landmark, screen_width, screen_height):
     y = int(clamp(landmark.y, 0.0, 1.0) * screen_height)
     return x, y
 
+def lerp(start, end, amount):
+    return start + (end - start) * amount
+
+def interpolate_points(start_point, end_point, steps):
+    points = []
+    for index in range(1, steps + 1):
+        amount = index / steps
+        x = int(lerp(start_point[0], end_point[0], amount))
+        y = int(lerp(start_point[1], end_point[1], amount))
+        points.append((x, y))
+    return points
+
+def choose_pointer_landmark(hand_landmarks):
+    return hand_landmarks[8]
+
 def check_pinch(hand_landmarks):
     index_tip = hand_landmarks[8]
     thumb_tip = hand_landmarks[4]
     distance = ((index_tip.x - thumb_tip.x) ** 2 + (index_tip.y - thumb_tip.y) ** 2) ** 0.5
     return distance < 0.05
 
+def click_via_landmark(hand_landmarks, mouse, is_left_pressed):
+    pinching = check_pinch(hand_landmarks)
+
+    if pinching and not is_left_pressed:
+        mouse.press(Button.left)
+        is_left_pressed = True
+    elif not pinching and is_left_pressed:
+        mouse.release(Button.left)
+        is_left_pressed = False
+
+    return is_left_pressed
+
+def camera_backend():
+    if sys.platform == "darwin":
+        return cv2.CAP_AVFOUNDATION
+    if sys.platform.startswith("win"):
+        return cv2.CAP_DSHOW
+    return cv2.CAP_ANY
+
+def camera_backends():
+    backend = camera_backend()
+    if backend == cv2.CAP_ANY:
+        return [backend]
+    return [backend, cv2.CAP_ANY]
+
+def open_camera(video_id):
+    for backend in camera_backends():
+        capture = cv2.VideoCapture(video_id, backend)
+        if capture.isOpened():
+            return capture
+        capture.release()
+    return cv2.VideoCapture(video_id)
+
 def select_camera():
-    # scan for available webcams
+    # scan for available webcams (macOS)
     print("scanning for webcams")
     available_cams = []
-    for i in range(5):
-        cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+    for i in range(3):
+        cap = open_camera(i)
         if cap.isOpened():
             available_cams.append(i)
-            cap.release()
-            
-    if not available_cams:
-        print("no webcams found")
-        return 0
-        
-    if len(available_cams) == 1:
-        print(f"using camera {available_cams[0]}")
-        return available_cams[0]
-        
-    # show available webcams
-    for cam_id in available_cams:
-        print(f"[{cam_id}] camera {cam_id}")
-        
+        cap.release()
+
+    if available_cams:
+        print("available webcams:")
+        for cam_id in available_cams:
+            print(f"camera {cam_id}")
+    else:
+        print("no webcams found during scan")
+
     while True:
         try:
-            selection = input(f"select webcam id ").strip()
-            if not selection:
-                return available_cams[0]
-            cam_id = int(selection)
-            if cam_id in available_cams:
+            prompt = "select webcam id"
+            if available_cams:
+                prompt += f" [{available_cams[0]}]"
+            selection = input(prompt + " ").strip()
+            if not selection and available_cams:
+                cam_id = available_cams[0]
+            else:
+                cam_id = int(selection)
+
+            capture = open_camera(cam_id)
+            if capture.isOpened():
+                capture.release()
                 return cam_id
+            capture.release()
+            print(f"camera {cam_id} could not be opened, try another id")
         except ValueError:
             pass
 
-def hand_loop(screen_width=1920, screen_height=1080, show_video=False):
+def hand_loop(screen_width=1920, screen_height=1080, show_video=False, video_id=None):
     global cursor_x, cursor_y, is_pinching, is_tracking
     
     download_model()
-    video_id = select_camera()
+    if video_id is None:
+        video_id = select_camera()
+
+    mouse = Controller()
     
     base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
     options = vision.HandLandmarkerOptions(
@@ -109,11 +227,20 @@ def hand_loop(screen_width=1920, screen_height=1080, show_video=False):
     )
     detector = vision.HandLandmarker.create_from_options(options)
     
-    capture = cv2.VideoCapture(video_id, cv2.CAP_DSHOW)
+    capture = open_camera(video_id)
+    if not capture.isOpened():
+        print(f"failed to open camera {video_id}")
+        is_tracking = False
+        detector.close()
+        return
+
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     
     start_time = time.time()
+    previous_point = None
+    last_move_time = time.time()
+    is_left_pressed = False
     
     while is_tracking:
         success, frame = capture.read()
@@ -134,43 +261,67 @@ def hand_loop(screen_width=1920, screen_height=1080, show_video=False):
                 draw_landmarks(frame, hand_landmarks)
 
             # update cursor position
-            pointer_landmark = hand_landmarks[8]
+            pointer_landmark = choose_pointer_landmark(hand_landmarks)
             cx, cy = landmark_to_screen(pointer_landmark, screen_width, screen_height)
             cursor_x = cx
             cursor_y = cy
+
+            current_point = (cx, cy)
+            if previous_point is None:
+                mouse.position = current_point
+                previous_point = current_point
+            else:
+                now = time.time()
+                elapsed = now - last_move_time
+                last_move_time = now
+
+                steps = max(1, int(elapsed * 60))
+                for point in interpolate_points(previous_point, current_point, steps):
+                    mouse.position = point
+
+                previous_point = current_point
             
             # update pinch state
             is_pinching = check_pinch(hand_landmarks)
+            is_left_pressed = click_via_landmark(hand_landmarks, mouse, is_left_pressed)
         else:
             # reset pinch when no hands detected
             is_pinching = False
+            if is_left_pressed:
+                mouse.release(Button.left)
+                is_left_pressed = False
+            previous_point = None
 
         if show_video:
-            cv2.imshow("pointing input", frame)
-            
-            # quit on q key
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                is_tracking = False
-                break
-                
-            # quit on window close
-            if cv2.getWindowProperty("pointing input", cv2.WND_PROP_VISIBLE) < 1:
-                is_tracking = False
-                break
+            try:
+                cv2.imshow("pointing input", frame)
+
+                # quit on q key
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    is_tracking = False
+                    break
+
+                # quit on window close
+                if cv2.getWindowProperty("pointing input", cv2.WND_PROP_VISIBLE) < 1:
+                    is_tracking = False
+                    break
+            except cv2.error:
+                print("video preview disabled because OpenCV windowing is unavailable")
+                show_video = False
             
     capture.release()
     if show_video:
         cv2.destroyAllWindows()
     detector.close()
 
-def start_tracking(screen_width=1920, screen_height=1080, show_video=False):
+def start_tracking(screen_width=1920, screen_height=1080, show_video=False, video_id=None):
     global is_tracking
     is_tracking = True
     
     # run hand tracking in background thread
     thread = threading.Thread(
         target=hand_loop, 
-        kwargs={"screen_width": screen_width, "screen_height": screen_height, "show_video": show_video}, 
+        kwargs={"screen_width": screen_width, "screen_height": screen_height, "show_video": show_video, "video_id": video_id}, 
         daemon=True
     )
     thread.start()
