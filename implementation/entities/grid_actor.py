@@ -1,5 +1,5 @@
 # P1 and P2 both need the same "walk exactly one tile, then wait" movement
-# instead of sliding around (pokemon vibes, as requested), so instead of
+# instead of sliding around (pokemon vibes), so instead of
 # copy-pasting the stepping math into both player files it lives here once
 import pyglet
 
