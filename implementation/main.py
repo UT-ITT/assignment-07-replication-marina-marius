@@ -45,6 +45,21 @@ def on_mouse_press(x, y, button, modifiers):
     manager.mouse_press(x, y, button, modifiers)
 
 
+@window.event
+def on_mouse_motion(x, y, dx, dy):
+    manager.mouse_motion(x, y, dx, dy)
+
+
+@window.event
+def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
+    manager.mouse_drag(x, y, dx, dy, buttons, modifiers)
+
+
+@window.event
+def on_mouse_release(x, y, button, modifiers):
+    manager.mouse_release(x, y, button, modifiers)
+
+
 def create_debug_window():
     global debug_window, debug_label
 
@@ -99,7 +114,15 @@ def main():
 
     print("starting gesture tracking")
     video_id = gesture_tracking.select_camera()
-    gesture_tracking.start_tracking(show_video=True, video_id=video_id)
+    # map the mediapipe cursor into THIS window specifically, not a hardcoded
+    # 1920x1080-at-(0,0) guess, matters as soon as the window isn't fullscreen
+    # on the primary display (see bugs.md)
+    window_x, window_y = window.get_location()
+    gesture_tracking.start_tracking(
+        screen_width=window.width, screen_height=window.height,
+        origin_x=window_x, origin_y=window_y,
+        show_video=True, video_id=video_id,
+    )
 
     if args.debug:
         create_debug_window()
