@@ -46,8 +46,9 @@ lesson learned -> using a real game engine with sprite editor in future no more 
 
 + because of ratio I added left and right on each side 6 additional tile columns ._.
 
-TODO for the other tilemaps too ahhh
-
+TODO: 
+- for the other tilemaps too ahhh
+- didn't test treasure chamber or game over screen since it's 1 am and I make rn more mistakes haha
 
 ## sources
 
