@@ -1,5 +1,6 @@
 import pyglet
 from pyglet.window import key
+from world.buttons import Button
 import config
 
 # Screen 4: Game Over/Game Won
@@ -17,25 +18,58 @@ class EndState:
 
         self.title_label = pyglet.text.Label(
             "",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 40,
+            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 120,
             anchor_x="center", anchor_y="center",
             font_size=32, batch=self.batch, group=self.ui_group,
         )
-        self.hint_label = pyglet.text.Label(
-            "press ENTER to return to the start menu (actually we need here also an interaction technique so TODO)",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 - 30,
+
+        # TODO: swap for real end-game metrics UI once we have one
+        self.stats_label = pyglet.text.Label(
+            "",
+            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 60,
             anchor_x="center", anchor_y="center",
             font_size=16, color=config.TEXT_COLOR,
             batch=self.batch, group=self.ui_group,
         )
 
+        self.restart_button = Button(
+            x=config.WIN_WIDTH // 2 - 100,
+            y=config.WIN_HEIGHT // 2 - 60,
+            width=200,
+            height=60,
+            text="Restart",
+            batch=self.batch,
+            group=self.ui_group,
+        )
+
+        self.hint_label = pyglet.text.Label(
+            "P2: click/pinch Restart (or press ENTER) to head back to the start menu",
+            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 - 120,
+            anchor_x="center", anchor_y="center",
+            font_size=14, color=config.TEXT_COLOR,
+            batch=self.batch, group=self.ui_group,
+        )
+
+        self._duration = 0.0
+
     def on_enter(self, won=False, **kwargs):
+        # freeze the clock the moment we land here, don't keep ticking while
+        # you're standing around reading your own score
+        self._duration = self.manager.stats.elapsed()
+
         if won:
             self.title_label.text = "Such a great work wizardinos!"
             self.title_label.color = (80, 200, 100, 255)
+            bullets = self.manager.stats.bullets_fired
+            accuracy = self.manager.stats.accuracy() * 100
+            self.stats_label.text = (
+                f"time: {self._duration:.1f}s | bullets fired: {bullets} | "
+                f"pitch accuracy: {accuracy:.0f}%"
+            )
         else:
             self.title_label.text = "Damn, didnt know we had losers as tutores *side eye*"
             self.title_label.color = (200, 60, 60, 255)
+            self.stats_label.text = f"time: {self._duration:.1f}s"
 
     def on_update(self, dt):
         pass
@@ -45,4 +79,8 @@ class EndState:
 
     def on_key_press(self, symbol, modifiers):
         if symbol == key.ENTER:
+            self.manager.set_state("start_menu")
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        if self.restart_button.hit_test(x, y):
             self.manager.set_state("start_menu")

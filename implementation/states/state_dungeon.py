@@ -1,7 +1,17 @@
+import random
+
 import pyglet
 from pyglet.window import key
 import config
 from world.tilemap import TileMap
+from world.hud import ShieldHud, GunHud, HeartsDisplay, PitchLegend
+from world.interactable import Interactable
+from world.gate import Gate
+from entities.shield import Shield, colors_match
+from entities.gun import Gun
+from entities.player_singer import Player1
+from entities.player_gesture import Player2
+from entities.enemy import Enemy
 
 # Screen 2: Dungeon
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -22,32 +32,181 @@ class DungeonState:
         )
         self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
-        # TODO: replace with shield.py (color/size/charge state)
-        self.shield = pyglet.shapes.Circle(
-            config.WIN_WIDTH // 2, config.WIN_HEIGHT // 2, 30,
-            color=(200, 200, 200), batch=self.batch, group=self.entity_group,
+        self.shield = Shield(
+            config.WIN_WIDTH // 2, config.WIN_HEIGHT // 2,
+            self.batch, self.entity_group,
+        )
+        self.shield_hud = ShieldHud(self.shield, self.batch, self.ui_group)
+
+        self.gun = Gun()
+        self.gun_hud = GunHud(self.gun, self.batch, self.ui_group, x=20, y=30)
+
+        self.player1 = Player1(
+            200, 120, self.batch, self.entity_group, shield=self.shield
+        )
+        self.player2 = Player2(
+            260, 120, self.batch, self.entity_group
         )
 
-        # TODO: replace with enemy.py (projectile spawning + movement)
-        self.enemy = pyglet.shapes.Rectangle(
-            config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 25,
-            50, 50, color=(160, 40, 40), batch=self.batch, group=self.entity_group,
+        self.hearts1 = HeartsDisplay(20, config.WIN_HEIGHT - 60, self.batch, self.ui_group)
+        self.hearts2 = HeartsDisplay(20, config.WIN_HEIGHT - 90, self.batch, self.ui_group)
+
+        # a lever that does nothing except prove E and pinch-click both work
+        self.lever = Interactable(
+            140, config.WIN_HEIGHT - 200, 40, self.batch, self.entity_group,
         )
+
+        # a couple of static blocks bullets can crash into instead of reaching their target
+        obstacle_y_positions = (240, 440)
+        self.obstacles = [
+            pyglet.shapes.Rectangle(
+                config.WIN_WIDTH // 2 - config.OBSTACLE_SIZE // 2, y,
+                config.OBSTACLE_SIZE, config.OBSTACLE_SIZE,
+                color=(90, 80, 70), batch=self.batch, group=self.entity_group,
+            )
+            for y in obstacle_y_positions
+        ]
+
+        # cheat sheet so P1 knows roughly what to sing instead of guessing
+        self.pitch_legend = PitchLegend(
+            config.WIN_WIDTH - 160, config.WIN_HEIGHT - 70,
+            self.batch, self.ui_group,
+        )
+
+        self.enemies = []
+        self.bullets = []
+        self.gate = None
+        self.phase = "puzzle"  # puzzle -> combat -> cleared
 
         self.hint_label = pyglet.text.Label(
-            "placeholder dungeon - ENTER: clear it, O: die",
+            "P2: click/pinch the crystal to wake it | P1: sing it open to start the fight",
             x=20, y=config.WIN_HEIGHT - 30,
             anchor_x="left", anchor_y="center",
             font_size=14, color=config.TEXT_COLOR,
             batch=self.batch, group=self.ui_group,
         )
 
+        self.keys = key.KeyStateHandler()
+        self._spawn_gate(self._start_combat)
+
+    def _spawn_gate(self, on_unlock):
+        # same crystal mechanic for both "start the fight" and "leave the room"
+        self.gate = Gate(
+            config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 40, 80,
+            self.batch, self.entity_group, on_unlock=on_unlock,
+            stats=self.manager.stats,
+        )
+
+    def _start_combat(self):
+        self.phase = "combat"
+        self.gate = None
+        count = random.randint(config.ENEMY_COUNT_MIN, config.ENEMY_COUNT_MAX)
+        for _ in range(count):
+            x = random.uniform(100, config.WIN_WIDTH - 150)
+            y = random.uniform(150, config.WIN_HEIGHT - 150)
+            self.enemies.append(Enemy(x, y, self.batch, self.entity_group))
+        self.hint_label.text = (
+            "P1: F for shield, sing to color it | "
+            "P2: C for gun, click hud buttons for modes, click enemies to shoot"
+        )
+
+    def _spawn_exit_gate(self):
+        self.phase = "cleared"
+        self._spawn_gate(self._enter_treasure)
+        self.hint_label.text = "room clear - P2: wake the exit crystal | P1: sing it open"
+
+    def _enter_treasure(self):
+        self.manager.set_state("treasure")
+
     def on_enter(self, **kwargs):
-        pass
+        self.manager.window.push_handlers(self.keys)
+
+    def on_exit(self):
+        self.manager.window.remove_handlers(self.keys)
 
     def on_update(self, dt):
-        # TODO: enemy projectile spawn/movement + shield collision checks
-        pass
+        self.shield.follow(
+            self.player1.x + self.player1.size / 2, self.player1.y + self.player1.size / 2,
+        )
+        self.shield.update(dt)
+        self.shield_hud.sync_with_shield()
+        self.gun.update(dt)
+        self.gun_hud.sync_with_gun()
+        self.player1.update(dt, self.keys)
+        self.player2.update(dt, self.keys)
+
+        if self.gate is not None:
+            self.gate.update(dt)
+
+        if self.phase == "combat":
+            self._update_combat(dt)
+
+    def _update_combat(self, dt):
+        targets = [(self.player1.x, self.player1.y), (self.player2.x, self.player2.y)]
+        for enemy in self.enemies:
+            bullet = enemy.update(dt, targets, self.batch, self.entity_group)
+            if bullet is not None:
+                self.bullets.append(bullet)
+
+        for bullet in self.bullets:
+            bullet.update(dt)
+
+        self._resolve_bullets()
+
+        self.enemies = [enemy for enemy in self.enemies if enemy.alive]
+        self.bullets = [bullet for bullet in self.bullets if bullet.alive]
+
+        if not self.enemies:
+            self._spawn_exit_gate()
+
+    def _resolve_bullets(self):
+        for bullet in self.bullets:
+            if not bullet.alive:
+                continue
+
+            for obstacle in self.obstacles:
+                if bullet.hits_rect(obstacle.x, obstacle.y, obstacle.width):
+                    bullet.destroy()
+                    break
+            if not bullet.alive:
+                continue
+
+            if bullet.owner == "enemy":
+                self._resolve_enemy_bullet(bullet)
+            else:
+                self._resolve_player_bullet(bullet)
+
+    def _resolve_enemy_bullet(self, bullet):
+        if self.shield.active and bullet.hits_rect(
+            self.shield.rect.x, self.shield.rect.y, self.shield.size
+        ):
+            bullet.destroy()
+            if not colors_match(bullet.color, self.shield.rect.color):
+                self._damage_closest_player(bullet)
+            return
+
+        if bullet.hits_rect(self.player1.x, self.player1.y, self.player1.size):
+            bullet.destroy()
+            self._lose_heart(self.hearts1)
+        elif bullet.hits_rect(self.player2.x, self.player2.y, self.player2.size):
+            bullet.destroy()
+            self._lose_heart(self.hearts2)
+
+    def _resolve_player_bullet(self, bullet):
+        for enemy in self.enemies:
+            if enemy.alive and bullet.hits_rect(enemy.x, enemy.y, enemy.size):
+                enemy.take_hit(bullet.color)
+                bullet.destroy()
+                break
+
+    def _damage_closest_player(self, bullet):
+        dist1 = (bullet.x - self.player1.x) ** 2 + (bullet.y - self.player1.y) ** 2
+        dist2 = (bullet.x - self.player2.x) ** 2 + (bullet.y - self.player2.y) ** 2
+        self._lose_heart(self.hearts1 if dist1 <= dist2 else self.hearts2)
+
+    def _lose_heart(self, hearts):
+        if hearts.lose() <= 0:
+            self.manager.set_state("end", won=False)
 
     def on_draw(self):
         self.batch.draw()
@@ -59,3 +218,29 @@ class DungeonState:
         # TODO: replace with real "player died" condition
         elif symbol == key.O:
             self.manager.set_state("end", won=False)
+        elif symbol == key.C:
+            self.player2.handle_key_press(symbol, self.gun)
+        else:
+            self.player1.handle_key_press(symbol, interactables=(self.lever,))
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        self.shield_hud.on_mouse_motion(x, y, dx, dy)
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        if self.shield_hud.on_mouse_press(x, y, button, modifiers):
+            return
+        if self.gun_hud.on_mouse_press(x, y, button, modifiers):
+            return
+        if self.gate is not None and self.gate.on_mouse_press(x, y):
+            return
+
+        if self.phase == "combat":
+            bullet = self.player2.try_shoot(
+                x, y, self.enemies, self.gun, self.batch, self.entity_group,
+            )
+            if bullet is not None:
+                self.bullets.append(bullet)
+                self.manager.stats.record_bullet_fired()
+                return
+
+        self.player2.try_interact_at(x, y, (self.lever,))

@@ -1,8 +1,11 @@
 import pyglet
 from pyglet.window import key
 import config
-from input import audio_input
-from entities import player_singer
+from entities.player_singer import Player1
+from entities.player_gesture import Player2
+from world.gate import Gate
+from world.hud import PitchLegend
+from world.interactable import Pushable
 
 # Screen 1: World
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -24,29 +27,34 @@ class OverworldState:
             color=(40, 60, 40), batch=self.batch, group=self.bg_group,
         )
 
-        # TODO: replace with player_singer.py / player_gesture.py sprites
-        self.player1 = pyglet.shapes.Rectangle(
-            200, 200, config.TILE_SIZE, config.TILE_SIZE,
-            color=config.P1_COLOR[:3], batch=self.batch, group=self.entity_group,
-        )
-        self.player2 = pyglet.shapes.Rectangle(
-            260, 200, config.TILE_SIZE, config.TILE_SIZE,
-            color=config.P2_COLOR[:3], batch=self.batch, group=self.entity_group,
+        # overworld has no shield (that's a dungeon thing), so F is just a shrug here
+        self.player1 = Player1(200, 200, self.batch, self.entity_group)
+        self.player2 = Player2(260, 200, self.batch, self.entity_group)
+
+        # mechanic B: P2 grabs it and drags it around, no strings attached
+        self.crystal = Pushable(
+            200, config.WIN_HEIGHT - 200, 40, self.batch, self.entity_group,
         )
 
-        # TODO: replace with gate.py (color-match gate) logic
-        self.gate = pyglet.shapes.Rectangle(
-            config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 50,
-            80, 100, color=player_singer.pitch_to_color(500), batch=self.batch, group=self.entity_group,
+        # mechanic A: P2 wakes it up, P1 sings its color to unlock it and
+        # unlocking it *is* opening it, straight into the dungeon
+        self.gate = Gate(
+            config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 50, 80,
+            self.batch, self.entity_group, on_unlock=self._enter_dungeon,
+            stats=self.manager.stats,
         )
-        self.gate_target_color = tuple(self.gate.color)
-        self.gate_open = False
-        self.gate_match_start = None
-        self.current_sung_color = self.player1.color
+
+        self.interactables = (self.crystal, self.gate)
+
+        # cheat sheet so P1 knows roughly what to sing instead of guessing
+        self.pitch_legend = PitchLegend(
+            config.WIN_WIDTH - 160, config.WIN_HEIGHT - 70,
+            self.batch, self.ui_group,
+        )
 
         self.hint_label = pyglet.text.Label(
-            # TODO: dummy logic for nwo
-            "WASD: P1 | Arrow keys: P2 | Sing the gate color near the gate, ENTER to enter",
+            "P1 (WASD): sings to unlock the gate | "
+            "P2 (Arrows + click/pinch): drags the crystal, wakes the gate up",
             x=20,
             y=config.WIN_HEIGHT - 30,
             anchor_x="left",
@@ -60,58 +68,39 @@ class OverworldState:
         self.keys = key.KeyStateHandler()
 
     def on_enter(self, **kwargs):
-        self.gate_open = False
-        self.gate_match_start = None
-        self.gate.color = self.gate_target_color
         self.manager.window.push_handlers(self.keys)
 
     def on_exit(self):
         self.manager.window.remove_handlers(self.keys)
 
+    def _enter_dungeon(self):
+        self.manager.set_state("dungeon")
+
     def on_update(self, dt):
-        speed = 150 * dt
-        if self.keys[key.W]:
-            self.player1.y += speed
-        if self.keys[key.S]:
-            self.player1.y -= speed
-        if self.keys[key.A]:
-            self.player1.x -= speed
-        if self.keys[key.D]:
-            self.player1.x += speed
+        self.player1.update(dt, self.keys)
+        self.player2.update(dt, self.keys)
+        self.gate.update(dt)
 
-        if self.keys[key.UP]:
-            self.player2.y += speed
-        if self.keys[key.DOWN]:
-            self.player2.y -= speed
-        if self.keys[key.LEFT]:
-            self.player2.x -= speed
-        if self.keys[key.RIGHT]:
-            self.player2.x += speed
-
-        if audio_input.current_frequency > 0.0:
-            self.current_sung_color = player_singer.pitch_to_color(audio_input.current_frequency)
-
-        self.player1.color = self.current_sung_color
-
-        if self._near_gate(self.player1) and self._colors_match(self.player1.color, self.gate_target_color):
-            if self.gate_match_start is None:
-                self.gate_match_start = 0.0
-            self.gate_match_start += dt
-            if self.gate_match_start >= 2.0:
-                self.gate_open = True
-                self.gate.color = (60, 180, 90)
-        else:
-            self.gate_match_start = None
-
-    def _near_gate(self, player):
-        return abs(player.x - self.gate.x) < 80 and abs(player.y - self.gate.y) < 80
-
-    def _colors_match(self, player_color, gate_color, tolerance=35):
-        return all(abs(player_color[index] - gate_color[index]) <= tolerance for index in range(3))
+        for interactable in self.interactables:
+            near = (
+                interactable.in_range(self.player1.x, self.player1.y)
+                or interactable.in_range(self.player2.x, self.player2.y)
+            )
+            interactable.show_hint(near)
 
     def on_draw(self):
         self.batch.draw()
 
     def on_key_press(self, symbol, modifiers):
-        if symbol == key.ENTER and self.gate_open:
-            self.manager.set_state("dungeon")
+        self.player1.handle_key_press(symbol)
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        if self.gate.on_mouse_press(x, y):
+            return
+        self.crystal.on_mouse_press(x, y)
+
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self.crystal.on_mouse_drag(dx, dy)
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        self.crystal.on_mouse_release()
