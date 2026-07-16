@@ -174,45 +174,24 @@ def open_camera(video_id):
     return cv2.VideoCapture(video_id)
 
 def select_camera():
-    # scan for available webcams (macOS)
-    print("scanning for webcams")
-    available_cams = []
-    for i in range(3):
-        cap = open_camera(i)
-        if cap.isOpened():
-            available_cams.append(i)
-        cap.release()
+    # used to scan cams 0-2 (opening + releasing each one) and then open the
+    # chosen one AGAIN just to confirm it works, before hand_loop() opens it
+    # a third time for real, opencv has no cheap "does this index exist"
+    # query, so that was 3+ real AVFoundation session opens back to back,
+    # which is exactly what made the webcam refuse to start at all sometimes
+    # (see bugs.md). now we just ask, and let hand_loop() single open_camera()
+    # call be the only time the camera hardware actually gets touched
+    selection = input("select webcam id [0] ").strip()
+    if not selection:
+        return 0
+    try:
+        return int(selection)
+    except ValueError:
+        return 0
 
-    if available_cams:
-        print("available webcams:")
-        for cam_id in available_cams:
-            print(f"camera {cam_id}")
-    else:
-        print("no webcams found during scan")
-
-    while True:
-        try:
-            prompt = "select webcam id"
-            if available_cams:
-                prompt += f" [{available_cams[0]}]"
-            selection = input(prompt + " ").strip()
-            if not selection and available_cams:
-                cam_id = available_cams[0]
-            else:
-                cam_id = int(selection)
-
-            capture = open_camera(cam_id)
-            if capture.isOpened():
-                capture.release()
-                return cam_id
-            capture.release()
-            print(f"camera {cam_id} could not be opened, try another id")
-        except ValueError:
-            pass
-
-def hand_loop(screen_width=1920, screen_height=1080, show_video=False, video_id=None):
+def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, show_video=False, video_id=None):
     global cursor_x, cursor_y, is_pinching, is_tracking
-    
+
     download_model()
     if video_id is None:
         video_id = select_camera()
@@ -260,13 +239,17 @@ def hand_loop(screen_width=1920, screen_height=1080, show_video=False, video_id=
             if show_video:
                 draw_landmarks(frame, hand_landmarks)
 
-            # update cursor position
+            # update cursor position (window-relative, for anything that wants to read it)
             pointer_landmark = choose_pointer_landmark(hand_landmarks)
             cx, cy = landmark_to_screen(pointer_landmark, screen_width, screen_height)
             cursor_x = cx
             cursor_y = cy
 
-            current_point = (cx, cy)
+            # the real OS cursor needs *global* desktop coordinates though,
+            # so the window on-screen position gets added back in here
+            # otherwise clicks land wherever (0, 0) happens to be instead of
+            # actually on the game window (see bugs.md, this one was a doozy)
+            current_point = (origin_x + cx, origin_y + cy)
             if previous_point is None:
                 mouse.position = current_point
                 previous_point = current_point
@@ -314,14 +297,18 @@ def hand_loop(screen_width=1920, screen_height=1080, show_video=False, video_id=
         cv2.destroyAllWindows()
     detector.close()
 
-def start_tracking(screen_width=1920, screen_height=1080, show_video=False, video_id=None):
+def start_tracking(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, show_video=False, video_id=None):
     global is_tracking
     is_tracking = True
-    
+
     # run hand tracking in background thread
     thread = threading.Thread(
-        target=hand_loop, 
-        kwargs={"screen_width": screen_width, "screen_height": screen_height, "show_video": show_video, "video_id": video_id}, 
+        target=hand_loop,
+        kwargs={
+            "screen_width": screen_width, "screen_height": screen_height,
+            "origin_x": origin_x, "origin_y": origin_y,
+            "show_video": show_video, "video_id": video_id,
+        },
         daemon=True
     )
     thread.start()
