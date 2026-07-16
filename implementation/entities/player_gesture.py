@@ -1,1 +1,64 @@
-# here comes the logic for P2 with gesture recognizer
+# here comes the logic for P2: arrow keys to walk, hand tracking does the rest
+#
+# fun fact: gesture_tracking.py doesn't hand us clean click coordinates, it
+# just straight up drags the real mouse around and clicks it for real (see
+# Controller in there). so instead of reinventing pinch math we let hud.py
+# and the interactables below catch it via on_mouse_press/on_mouse_motion
+# like it's a totally normal click, coordinates just work out that way
+from pyglet.window import key
+
+import config
+from entities.grid_actor import GridActor
+from entities.projectile import Projectile
+from input import gesture_tracking
+
+
+class Player2(GridActor):
+
+    def __init__(self, x, y, batch, group):
+        super().__init__(x, y, config.P2_COLOR[:3], batch, group)
+
+    def update(self, dt, keys):
+        dy = self.axis_from_keys(keys, key.DOWN, key.UP)
+        dx = 0 if dy != 0 else self.axis_from_keys(keys, key.LEFT, key.RIGHT)
+        self.step_towards(dt, dx, dy)
+
+        # no camera preview window open? no problem, rectangle just glows while pinching
+        base = config.P2_COLOR[:3]
+        if gesture_tracking.is_pinching:
+            self.color = tuple(min(255, channel + 60) for channel in base)
+        else:
+            self.color = base
+
+    def try_interact_at(self, x, y, interactables, radius=64):
+        # comes from the state's on_mouse_press with the real click/pinch spot,
+        # hud gets first dibs on the click before we bother checking the world
+        for interactable in interactables:
+            if abs(x - interactable.x) <= radius and abs(y - interactable.y) <= radius:
+                interactable.interact()
+                return interactable
+        return None
+
+    def handle_key_press(self, symbol, gun):
+        # P1 gets F/E via Player1.handle_key_press, P2 gets C here, two
+        # separate dispatch points so the two players keys can never get
+        # mixed up at the routing level
+        if symbol == key.C:
+            gun.toggle()
+
+    def try_shoot(self, x, y, enemies, gun, batch, group):
+        # same "click on it" targeting as try_interact_at, just aimed at
+        # enemies instead of world props, and gated behind the gun being drawn
+        if not gun.active:
+            return None
+
+        for enemy in enemies:
+            if not enemy.alive:
+                continue
+            if enemy.x <= x <= enemy.x + enemy.size and enemy.y <= y <= enemy.y + enemy.size:
+                return Projectile(
+                    self.x + self.size / 2, self.y + self.size / 2,
+                    enemy.x + enemy.size / 2, enemy.y + enemy.size / 2,
+                    gun.color, batch, group, owner="player2",
+                )
+        return None
