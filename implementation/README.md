@@ -68,3 +68,4 @@ enemies + dungeon: https://pixel-poem.itch.io/dungeon-assetpuck
 controller + keyboard: https://vryell.itch.io/controller-keyboard-icons
 - treasure: https://pixelserial.itch.io/rpg-pixel-art-chests/download/eyJpZCI6MzQyNzI1OCwiZXhwaXJlcyI6MTc4NDI5NDIzNn0%3d%2evmdwQ1cZ2frwB%2bsrXRcKRwwKGOg%3d
 - gems: https://drxwat.itch.io/pixel-art-diamond
+- portal/gate: https://pixelnauta.itch.io/pixel-dimensional-portal-32x32/download/eyJpZCI6MjM5NDE0MSwiZXhwaXJlcyI6MTc4NDMwMjM2OH0%3d%2e5aRHN0Nm0omOx%2bKZBr5Z0mqdhBQ%3d
