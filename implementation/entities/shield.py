@@ -4,6 +4,7 @@
 import pyglet
 
 import config
+from entities.sprite_anim import load_animation
 from input import audio_input
 
 # the three flavors P2 can pick for P1 shield via the hud buttons
@@ -11,7 +12,16 @@ MODE_COLOR = "color"
 MODE_SIZE = "size"
 MODE_TUNE = "tune"
 
-DEFAULT_COLOR = (255, 255, 255)
+# the tornado shield sprite and the projectile sprite fold their color down
+# to one of these 4 folders
+_COLOR_FOLDERS = ["red", "blue", "green", "yellow"]
+
+# assets/tornado/<color>/001-009.png: 001-005 is the looping "has durability"
+# idle animation, 006-009 is the one-shot "shield just broke" animation
+TORNADO_FRAME_DURATION = 0.06
+TORNADO_IDLE_FRAMES = tuple(range(1, 6))
+TORNADO_BREAK_FRAMES = tuple(range(6, 10))
+TORNADO_SPRITE_PIXELS = 64  # source frames are 64x64, self.size scales from that
 
 
 def _frequency_bucket(frequency):
@@ -36,8 +46,34 @@ def colors_match(color, target, tolerance=35):
     return all(abs(color[i] - target[i]) <= tolerance for i in range(3))
 
 
+def color_folder(color):
+    # which of the 4 sprite-folders (red/blue/green/yellow) a SHIELD_COLORS
+    # entry maps to shared between the tornado shield and the projectiles,
+    # both are stuck picking one of 4 discrete sprite sets, not a live tint
+    for index, target in enumerate(config.SHIELD_COLORS):
+        if target[:3] == tuple(color[:3]):
+            return _COLOR_FOLDERS[index]
+    return _COLOR_FOLDERS[0]  # shouldn't happen, every color here comes from SHIELD_COLORS
+
+
+def _tornado_idle_animation(folder):
+    return load_animation(
+        f"assets/tornado/{folder}", TORNADO_IDLE_FRAMES, TORNADO_FRAME_DURATION, loop=True
+    )
+
+
+def _tornado_break_animation(folder):
+    return load_animation(
+        f"assets/tornado/{folder}", TORNADO_BREAK_FRAMES, TORNADO_FRAME_DURATION, loop=False
+    )
+
+
 class Shield:
-    # still just a rectangle, a sprite shows up here once somebody draws one (not me)
+    # a little tornado sprite: 001-005 loops while it still has durability,
+    # 006-009 plays once when duration_left hits zero (it breaks, doesn't
+    # just vanish), then it settles back into a faint idle loop waiting to
+    # be raised again same "off but visible" look the old plain rectangle
+    # had via SHIELD_INACTIVE_OPACITY
     def __init__(self, x, y, batch, group):
         self.x = x
         self.y = y
@@ -46,17 +82,21 @@ class Shield:
         self.active = False
         self.mode = None
         self.duration_left = 0.0
+        self.color = config.SHIELD_COLORS[0]
+        self._folder = color_folder(self.color)
+        self._breaking = False
 
         # keeping score of the notes P1 sang for the pitch-ladder mechanic
         self._tune_notes = []
         self._tune_timer = 0.0
         self._last_bucket = None
 
-        self.rect = pyglet.shapes.Rectangle(
-            x - self.size / 2, y - self.size / 2, self.size, self.size,
-            color=DEFAULT_COLOR, batch=batch, group=group,
+        self.sprite = pyglet.sprite.Sprite(
+            _tornado_idle_animation(self._folder), x=x, y=y, batch=batch, group=group,
         )
-        self.rect.opacity = config.SHIELD_INACTIVE_OPACITY
+        self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS
+        self.sprite.opacity = config.SHIELD_INACTIVE_OPACITY
+        self.sprite.push_handlers(on_animation_end=self._on_break_animation_end)
 
     def set_mode(self, mode):
         # hud.py calls this the second P2 clicks/pinches a mode button
@@ -67,21 +107,30 @@ class Shield:
 
     def follow(self, x, y):
         # "spawns in front of P1" only means something if it actually stays
-        # in front of P1 - without this it just sits wherever it was first
+        # in front of P1 without this it just sits wherever it was first
         # placed while P1 wanders off, which makes blocking bullets pointless
         self.x = x
         self.y = y
-        self.rect.x = x - self.size / 2
-        self.rect.y = y - self.size / 2
+        self.sprite.x = x
+        self.sprite.y = y
+
+    def blocks(self, color):
+        # only a raised, matching-color tornado actually absorbs a bullet
+        # anything else is meant to fly straight through it untouched
+        return self.active and colors_match(color, self.color)
 
     def activate(self):
         self.active = True
         self.duration_left = config.SHIELD_DEFAULT_DURATION
-        self.rect.opacity = 255
+        self._breaking = False
+        self.sprite.opacity = 255
+        self.sprite.image = _tornado_idle_animation(self._folder)
 
     def deactivate(self):
         self.active = False
-        self.rect.opacity = config.SHIELD_INACTIVE_OPACITY
+        self._breaking = False
+        self.sprite.opacity = config.SHIELD_INACTIVE_OPACITY
+        self.sprite.image = _tornado_idle_animation(self._folder)
 
     def toggle(self):
         # hooked up to the F key
@@ -96,7 +145,7 @@ class Shield:
 
         self.duration_left -= dt
         if self.duration_left <= 0:
-            self.deactivate()
+            self._break()
             return
 
         if self.mode == MODE_COLOR:
@@ -106,20 +155,34 @@ class Shield:
         elif self.mode == MODE_TUNE:
             self._update_tune(audio_input.current_frequency, dt)
 
+    def _break(self):
+        # duration ran out mid-fight stops blocking immediately, the
+        self.active = False
+        self._breaking = True
+        self.sprite.image = _tornado_break_animation(self._folder)
+
+    def _on_break_animation_end(self):
+        if not self._breaking:
+            return  # a fresh activate()/deactivate() already swapped the image, not our event to handle
+        self._breaking = False
+        self.sprite.opacity = config.SHIELD_INACTIVE_OPACITY
+        self.sprite.image = _tornado_idle_animation(self._folder)
+
     def _update_color(self, frequency):
         if frequency <= 0:
             return
-        bucket = _frequency_bucket(frequency)
-        self.rect.color = config.SHIELD_COLORS[bucket][:3]
+        self.color = frequency_to_color(frequency)
+        folder = color_folder(self.color)
+        if folder != self._folder:
+            # only swap the sprite image when the folder actually changes,
+            # re-assigning it every frame would restart the idle loop nonstop
+            self._folder = folder
+            self.sprite.image = _tornado_idle_animation(folder)
 
     def _update_size(self, volume):
         normalized = max(0.0, min(1.0, volume / config.SHIELD_MAX_VOLUME))
-        new_size = config.SHIELD_MIN_SIZE + normalized * (config.SHIELD_MAX_SIZE - config.SHIELD_MIN_SIZE)
-        self.size = new_size
-        self.rect.width = new_size
-        self.rect.height = new_size
-        self.rect.x = self.x - new_size / 2
-        self.rect.y = self.y - new_size / 2
+        self.size = config.SHIELD_MIN_SIZE + normalized * (config.SHIELD_MAX_SIZE - config.SHIELD_MIN_SIZE)
+        self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS
 
     def _update_tune(self, frequency, dt):
         self._tune_timer += dt
