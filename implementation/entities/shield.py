@@ -16,7 +16,7 @@ MODE_TUNE = "tune"
 # to one of these 4 folders
 _COLOR_FOLDERS = ["red", "blue", "green", "yellow"]
 
-# assets/tornado/<color>/001-009.png: 001-005 is the looping "has durability"
+# assets/Tornado/<color>/001-009.png: 001-005 is the looping "has durability"
 # idle animation, 006-009 is the one-shot "shield just broke" animation
 TORNADO_FRAME_DURATION = 0.06
 TORNADO_IDLE_FRAMES = tuple(range(1, 6))
@@ -60,7 +60,7 @@ def color_folder(color):
 
 def _tornado_idle_animation(folder):
     return load_animation(
-        f"assets/tornado/{folder}",
+        f"assets/Tornado/{folder}",
         TORNADO_IDLE_FRAMES,
         TORNADO_FRAME_DURATION,
         loop=True,
@@ -69,7 +69,7 @@ def _tornado_idle_animation(folder):
 
 def _tornado_break_animation(folder):
     return load_animation(
-        f"assets/tornado/{folder}",
+        f"assets/Tornado/{folder}",
         TORNADO_BREAK_FRAMES,
         TORNADO_FRAME_DURATION,
         loop=False,
