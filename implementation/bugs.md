@@ -86,3 +86,11 @@ the spec wants a "pitch accuracy ratio," but P1's pitch is sampled continuously,
 
 **the chest slot markers are drawn with a fully transparent fill and I haven't actually looked at them yet**
 `world/chest.py` marks each chest's target slot with `pyglet.shapes.BorderedRectangle(..., color=(0, 0, 0, 0), border_color=target_color)` ,a colored outline with nothing filled in. this compiles and constructs fine, and nothing in the headless tests would catch a rendering problem since none of them ever call `on_draw()`. flagging it here instead of quietly assuming it looks right: worth an actual look in `python main.py` before trusting that a zero-alpha fill renders as "see-through" and not as, say, an opaque black square.
+
+## the tornado that only span up because macOS wasn't looking closely enough
+
+**the bug**
+found this one doing a full-repo audit for the todo file, not from a report - `entities/shield.py` loads every tornado shield frame from `"assets/tornado/<color>/..."` (lowercase), but the actual folder on disk is `assets/Tornado` (capital T). this ran completely fine every single time it was tested, because APFS (macOS's default filesystem) is case-insensitive by default - `assets/tornado` and `assets/Tornado` point at the exact same directory as far as macOS is concerned. would've been a hard crash the moment this ran on Linux, or any case-sensitive filesystem, or even macOS with a case-sensitive volume - `pyglet.image.load()` doesn't case-fold paths, it just fails to find the file.
+
+**the fix**
+pointed the two `f"assets/tornado/{folder}"` calls (and the comment above them) at the real casing, `assets/Tornado`. quick reminder to actually check folder casing against what the code assumes, especially since case-insensitive-by-default is a macOS-specific convenience, not something to rely on.
