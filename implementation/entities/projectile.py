@@ -1,8 +1,27 @@
 # bullets: enemy ones and P2 ones, both fly in a straight line and
 # completely ignore grid movement -> a bullet doesn't care whose turn it is
+#
+# sprites: assets/projectile/<color>/001-010.png. 001-005 is the looping
+# in-flight animation, 006-010 is a one-shot explosion played on impact
+# folder picked via shield.py color_folder(), same bucket index the
+# shield/gate/gun already use for "which color is this"
 import pyglet
 
 import config
+from entities.shield import color_folder
+from entities.sprite_anim import load_animation
+
+FRAME_DURATION = 0.05
+FLIGHT_FRAMES = tuple(range(1, 6))
+EXPLOSION_FRAMES = tuple(range(6, 11))
+
+
+def _flight_animation(folder):
+    return load_animation(f"assets/projectile/{folder}", FLIGHT_FRAMES, FRAME_DURATION, loop=True)
+
+
+def _explosion_animation(folder):
+    return load_animation(f"assets/projectile/{folder}", EXPLOSION_FRAMES, FRAME_DURATION, loop=False)
 
 
 def circle_rect_overlap(cx, cy, radius, rx, ry, size):
@@ -20,32 +39,46 @@ class Projectile:
         self.color = color
         self.radius = radius
         self.owner = owner  # "enemy" or "player2", decides what it's allowed to hit
-        self.alive = True
+        self.alive = True      # still flying, still able to hit / be hit
+        self.finished = False  # explosion animation (if any) has played out, safe to drop
 
         dx, dy = target_x - x, target_y - y
         distance = max(1.0, (dx ** 2 + dy ** 2) ** 0.5)
         self.vx = dx / distance * speed
         self.vy = dy / distance * speed
 
-        self.shape = pyglet.shapes.Circle(
-            x, y, radius, color=color[:3], batch=batch, group=group,
+        self._folder = color_folder(color)
+        self.sprite = pyglet.sprite.Sprite(
+            _flight_animation(self._folder), x=x, y=y, batch=batch, group=group,
         )
+        self.sprite.scale = config.PROJECTILE_DISPLAY_SIZE / self.sprite.width
+        self.sprite.push_handlers(on_animation_end=self._on_explosion_end)
 
     def update(self, dt):
         if not self.alive:
-            return  # already destroyed this frame, don't touch a deleted shape
+            return  # exploding or already gone, the animation drives itself now
 
         self.x += self.vx * dt
         self.y += self.vy * dt
-        self.shape.x = self.x
-        self.shape.y = self.y
+        self.sprite.x = self.x
+        self.sprite.y = self.y
 
         if not (0 <= self.x <= config.WIN_WIDTH and 0 <= self.y <= config.WIN_HEIGHT):
-            self.alive = False
+            self.destroy(explode=False)  # off-screen, nobody's around to see it pop
 
     def hits_rect(self, x, y, size):
         return circle_rect_overlap(self.x, self.y, self.radius, x, y, size)
 
-    def destroy(self):
+    def destroy(self, explode=True):
+        if not self.alive:
+            return
         self.alive = False
-        self.shape.delete()
+        if explode:
+            self.sprite.image = _explosion_animation(self._folder)
+        else:
+            self.finished = True
+            self.sprite.delete()
+
+    def _on_explosion_end(self):
+        self.finished = True
+        self.sprite.delete()
