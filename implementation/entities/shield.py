@@ -53,18 +53,26 @@ def color_folder(color):
     for index, target in enumerate(config.SHIELD_COLORS):
         if target[:3] == tuple(color[:3]):
             return _COLOR_FOLDERS[index]
-    return _COLOR_FOLDERS[0]  # shouldn't happen, every color here comes from SHIELD_COLORS
+    return _COLOR_FOLDERS[
+        0
+    ]  # shouldn't happen, every color here comes from SHIELD_COLORS
 
 
 def _tornado_idle_animation(folder):
     return load_animation(
-        f"assets/tornado/{folder}", TORNADO_IDLE_FRAMES, TORNADO_FRAME_DURATION, loop=True
+        f"assets/tornado/{folder}",
+        TORNADO_IDLE_FRAMES,
+        TORNADO_FRAME_DURATION,
+        loop=True,
     )
 
 
 def _tornado_break_animation(folder):
     return load_animation(
-        f"assets/tornado/{folder}", TORNADO_BREAK_FRAMES, TORNADO_FRAME_DURATION, loop=False
+        f"assets/tornado/{folder}",
+        TORNADO_BREAK_FRAMES,
+        TORNADO_FRAME_DURATION,
+        loop=False,
     )
 
 
@@ -109,11 +117,13 @@ class Shield:
 
     def contains(self, x, y):
         half = self.size / 2
-        return self.x - half <= x <= self.x + half and self.y - half <= y <= self.y + half
+        return (
+            self.x - half <= x <= self.x + half and self.y - half <= y <= self.y + half
+        )
 
     def on_mouse_press(self, x, y):
         # P2 mechanic: click/pinch the raised shield to grab it, same deal
-        # as Pushable only takes effect while it's actually up
+        # as Pushable only takes effect while its actually up
         if not self.active:
             return False
         if self.contains(x, y):
@@ -153,7 +163,10 @@ class Shield:
         if self.sprite is None:
             self.sprite = pyglet.sprite.Sprite(
                 _tornado_idle_animation(self._folder),
-                x=self.x, y=self.y, batch=self._batch, group=self._group,
+                x=self.x,
+                y=self.y,
+                batch=self._batch,
+                group=self._group,
             )
             self.sprite.push_handlers(on_animation_end=self._on_break_animation_end)
         else:
@@ -220,7 +233,9 @@ class Shield:
 
     def _update_size(self, volume):
         normalized = max(0.0, min(1.0, volume / config.SHIELD_MAX_VOLUME))
-        self.size = config.SHIELD_MIN_SIZE + normalized * (config.SHIELD_MAX_SIZE - config.SHIELD_MIN_SIZE)
+        self.size = config.SHIELD_MIN_SIZE + normalized * (
+            config.SHIELD_MAX_SIZE - config.SHIELD_MIN_SIZE
+        )
         self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS
 
     def _update_tune(self, frequency, dt):
@@ -248,5 +263,7 @@ class Shield:
         if a < b < c:
             self.duration_left += config.SHIELD_TUNE_BOOST
         elif a > b > c:
-            self.duration_left = max(0.0, self.duration_left - config.SHIELD_TUNE_PENALTY)
+            self.duration_left = max(
+                0.0, self.duration_left - config.SHIELD_TUNE_PENALTY
+            )
         self._tune_notes = []

@@ -5,7 +5,7 @@
 # 2. shange size of shield
 # 3. change duration of shield
 # to set those P2 need to pinch the right overlay so P1 can start using all the vocal chords they have
-# why? because it's easier handling for us (in my opinion)
+# why? because its easier handling for us (in my opinion)
 import pyglet
 
 import config
@@ -50,13 +50,21 @@ class ShieldHud:
         # the hover glow fresh every frame since set_active() would otherwise
         # just paint right over it
         self.set_visible(self.shield.active)
-        hovered_mode = self._hit_mode(*self._hover_pos) if (self.shield.active and self._hover_pos) else None
+        hovered_mode = (
+            self._hit_mode(*self._hover_pos)
+            if (self.shield.active and self._hover_pos)
+            else None
+        )
 
         for mode, button in self.buttons.items():
             button.set_active(mode == self.shield.mode)
             if mode == hovered_mode and mode != self.shield.mode:
                 r, g, b = button.idle_color
-                button.rect.color = (min(255, r + 40), min(255, g + 40), min(255, b + 40))
+                button.rect.color = (
+                    min(255, r + 40),
+                    min(255, g + 40),
+                    min(255, b + 40),
+                )
 
     def on_mouse_motion(self, x, y, dx, dy):
         # P2 pinch literally drags the real mouse around (see Controller
@@ -110,7 +118,9 @@ class HeartsDisplay:
     def __init__(self, x, y, batch, group, count=config.PLAYER_HEART_COUNT):
         self.count = count
         self.pips = [
-            pyglet.shapes.Circle(x + i * 26, y, 10, color=(220, 60, 60), batch=batch, group=group)
+            pyglet.shapes.Circle(
+                x + i * 26, y, 10, color=(220, 60, 60), batch=batch, group=group
+            )
             for i in range(count)
         ]
 
@@ -131,19 +141,36 @@ class PitchLegend:
         right_edge = x + last_index * (swatch_size + gap) + swatch_size
 
         self.low_label = pyglet.text.Label(
-            "low pitch", x=x, y=y + swatch_size + 4,
-            anchor_x="left", anchor_y="bottom", font_size=10,
-            color=config.TEXT_COLOR, batch=batch, group=group,
+            "low pitch",
+            x=x,
+            y=y + swatch_size + 4,
+            anchor_x="left",
+            anchor_y="bottom",
+            font_size=10,
+            color=config.TEXT_COLOR,
+            batch=batch,
+            group=group,
         )
         self.high_label = pyglet.text.Label(
-            "high pitch", x=right_edge, y=y + swatch_size + 4,
-            anchor_x="right", anchor_y="bottom", font_size=10,
-            color=config.TEXT_COLOR, batch=batch, group=group,
+            "high pitch",
+            x=right_edge,
+            y=y + swatch_size + 4,
+            anchor_x="right",
+            anchor_y="bottom",
+            font_size=10,
+            color=config.TEXT_COLOR,
+            batch=batch,
+            group=group,
         )
         self.swatches = [
             pyglet.shapes.Rectangle(
-                x + i * (swatch_size + gap), y, swatch_size, swatch_size,
-                color=color[:3], batch=batch, group=group,
+                x + i * (swatch_size + gap),
+                y,
+                swatch_size,
+                swatch_size,
+                color=color[:3],
+                batch=batch,
+                group=group,
             )
             for i, color in enumerate(config.SHIELD_COLORS)
         ]

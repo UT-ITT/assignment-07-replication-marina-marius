@@ -48,7 +48,7 @@ lesson learned -> using a real game engine with sprite editor in future no more 
 
 TODO: 
 - for the other tilemaps too ahhh
-- didn't test treasure chamber or game over screen since it's 1 am and I make rn more mistakes haha
+- didn't test treasure chamber or game over screen since its 1 am and I make rn more mistakes haha
 
 ## sources
 
@@ -61,3 +61,10 @@ TODO:
 - https://opengameart.org/content/gem-icons-0
 - projectiles: https://pimen.itch.io/magical-animation-effects?__cf_chl_tk=WPC4MVda3nuvSvSu0.jML0moKodloZaz7RZJ98iUr3Y-1784286481-1.0.1.1-W2BH6zjARJbeqOtL_VRFk_JVZhwMaEBySsNUOToDago
 - tornado: https://foozlecc.itch.io/pixel-magic-sprite-effects
+- characters: https://zerie.itch.io/tiny-rpg-character-asset-pack
+https://oboropixel.itch.io/characters-animations-asset-pack?download
+https://pixelserial.itch.io/rpg-top-down-character-asset-pack?download
+enemies + dungeon: https://pixel-poem.itch.io/dungeon-assetpuck
+controller + keyboard: https://vryell.itch.io/controller-keyboard-icons
+- treasure: https://pixelserial.itch.io/rpg-pixel-art-chests/download/eyJpZCI6MzQyNzI1OCwiZXhwaXJlcyI6MTc4NDI5NDIzNn0%3d%2evmdwQ1cZ2frwB%2bsrXRcKRwwKGOg%3d
+- gems: https://drxwat.itch.io/pixel-art-diamond

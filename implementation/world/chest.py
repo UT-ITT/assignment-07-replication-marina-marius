@@ -1,5 +1,5 @@
 # here comes the treasure chamber's chest logic: sing it the right color,
-# then drag it onto its marked spot - do both and it's solved. combines the
+# then drag it onto its marked spot - do both and its solved. combines the
 # same two tricks world/gate.py and Pushable already know, just on one object
 #
 # sprites: assets/chest/basic001.png is the neutral "no color yet" look,
@@ -20,7 +20,9 @@ SLOT_TOLERANCE = 24
 CHEST_SPRITE_PIXELS = 32
 CHEST_BASIC_IMAGE = "assets/chest/basic001.png"
 
-SKULL_FRAME_DURATION = 0.35  # slow and deliberate, not a snappy pop like the projectiles/shield
+SKULL_FRAME_DURATION = (
+    0.35  # slow and deliberate, not a snappy pop like the projectiles/shield
+)
 SKULL_OPEN_FRAMES = tuple(range(1, 5))
 
 
@@ -30,15 +32,30 @@ def _chest_color_image(folder):
 
 def _skull_open_animation():
     return load_animation(
-        "assets/chest/skull", SKULL_OPEN_FRAMES, SKULL_FRAME_DURATION, loop=False, name_prefix="skull"
+        "assets/chest/skull",
+        SKULL_OPEN_FRAMES,
+        SKULL_FRAME_DURATION,
+        loop=False,
+        name_prefix="skull",
     )
 
 
 class Chest(Interactable):
     # states: locked (not its turn) -> idle (its turn, is_active) ->
     # listening (P1 singing) -> colored (locked in, draggable) -> solved
-    def __init__(self, x, y, size, target_color, target_slot, batch, group,
-                 on_solved=None, stats=None, hint="P2: click/pinch to wake it up, then P1: sing its color"):
+    def __init__(
+        self,
+        x,
+        y,
+        size,
+        target_color,
+        target_slot,
+        batch,
+        group,
+        on_solved=None,
+        stats=None,
+        hint="P2: click/pinch to wake it up, then P1: sing its color",
+    ):
         # not calling Interactable.__init__ chests render via a color-
         # swapping sprite, not the base rectangle, so theres nothing to
         # reuse there besides x/y/size and the hint label, built directly below
@@ -47,7 +64,9 @@ class Chest(Interactable):
         self.size = size
         self.target_color = target_color
         self.target_folder = color_folder(target_color)
-        self.color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(target_color)]
+        self.color_name = config.SHIELD_COLOR_NAMES[
+            config.SHIELD_COLORS.index(target_color)
+        ]
         self.target_slot = target_slot
         self.on_solved = on_solved
         self.stats = stats
@@ -61,23 +80,37 @@ class Chest(Interactable):
 
         self.sprite = pyglet.sprite.Sprite(
             load_image(CHEST_BASIC_IMAGE, anchor_center=False),
-            x=x, y=y, batch=batch, group=group,
+            x=x,
+            y=y,
+            batch=batch,
+            group=group,
         )
         self.sprite.scale = size / CHEST_SPRITE_PIXELS
 
         self.hint_label = pyglet.text.Label(
-            hint, x=x + size / 2, y=y + size + 10,
-            anchor_x="center", anchor_y="bottom",
-            font_size=11, color=(255, 255, 255, 255),
-            batch=batch, group=group,
+            hint,
+            x=x + size / 2,
+            y=y + size + 10,
+            anchor_x="center",
+            anchor_y="bottom",
+            font_size=11,
+            color=(255, 255, 255, 255),
+            batch=batch,
+            group=group,
         )
         self.hint_label.visible = False
 
         # outline showing where this chest actually belongs, visible from the start
         self.slot_marker = pyglet.shapes.BorderedRectangle(
-            target_slot[0], target_slot[1], size, size, border=3,
-            color=(0, 0, 0, 0), border_color=target_color[:3],
-            batch=batch, group=group,
+            target_slot[0],
+            target_slot[1],
+            size,
+            size,
+            border=3,
+            color=(0, 0, 0, 0),
+            border_color=target_color[:3],
+            batch=batch,
+            group=group,
         )
 
     def activate(self):
@@ -113,7 +146,10 @@ class Chest(Interactable):
 
     def _check_solved(self):
         slot_x, slot_y = self.target_slot
-        if abs(self.x - slot_x) > SLOT_TOLERANCE or abs(self.y - slot_y) > SLOT_TOLERANCE:
+        if (
+            abs(self.x - slot_x) > SLOT_TOLERANCE
+            or abs(self.y - slot_y) > SLOT_TOLERANCE
+        ):
             return
         self.x, self.y = slot_x, slot_y
         self.sprite.x, self.sprite.y = slot_x, slot_y
@@ -167,7 +203,11 @@ class SkullChest:
         self.on_open = on_open
         self.opened = False
         self.sprite = pyglet.sprite.Sprite(
-            _skull_open_animation(), x=x, y=y, batch=batch, group=group,
+            _skull_open_animation(),
+            x=x,
+            y=y,
+            batch=batch,
+            group=group,
         )
         self.sprite.scale = size / CHEST_SPRITE_PIXELS
         self.sprite.push_handlers(on_animation_end=self._on_open_end)

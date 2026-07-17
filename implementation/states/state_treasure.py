@@ -3,7 +3,8 @@ from pyglet.window import key
 import config
 from entities.player_singer import Player1
 from entities.player_gesture import Player2
-from world.chest import Chest
+from world.chest import Chest, SkullChest
+from world.gem import Gem
 from world.hud import PitchLegend
 
 # Screen 3: Treasure Chamber
@@ -11,7 +12,8 @@ from world.hud import PitchLegend
 # Will add code comments in the end since this will be getting updated and I dont want to waste precise time
 # rewriting my funny comments over and over again :3
 
-DIAMOND_DISPLAY_TIME = 10.0
+SOLVED_WAIT_TIME = 3.0  # pause on the 3 solved chests before they give way to the skull chest
+REVEAL_DISPLAY_TIME = 10.0  # how long the locked, revealed gem sits there before heading to the end screen
 
 
 class TreasureState:
@@ -63,9 +65,11 @@ class TreasureState:
             self.batch, self.ui_group,
         )
 
-        self.diamond = None
-        self.diamond_timer = 0.0
-        self.solved_all = False
+        self.phase = "chests"  # chests -> waiting -> skull -> gem -> reveal
+        self._wait_timer = 0.0
+        self.skull_chest = None
+        self.gem = None
+        self.reveal_timer = 0.0
 
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch the glowing chest to wake it | P1: sing it its color, "
@@ -89,40 +93,63 @@ class TreasureState:
         if self.progress < len(self.chests):
             self.chests[self.progress].activate()
         else:
-            self._all_solved()
+            # all 3 solved - sit on that for a beat before the room reacts
+            self.phase = "waiting"
+            self._wait_timer = SOLVED_WAIT_TIME
+            self.hint_label.text = "all three chests are glowing... something's happening"
 
-    def _all_solved(self):
-        self.solved_all = True
+    def _spawn_skull(self):
+        self.phase = "skull"
         for chest in self.chests:
-            chest.rect.visible = False
-            chest.slot_marker.visible = False
-            chest.hint_label.visible = False
+            chest.delete()
 
-        # TODO: replace with an actual diamond sprite once art exists
-        self.diamond = pyglet.shapes.Circle(
-            config.WIN_WIDTH // 2, config.WIN_HEIGHT // 2, 100,
-            color=(230, 200, 60), batch=self.batch, group=self.entity_group,
+        # dead center of the row the 3 chest slots sat on
+        first_slot, last_slot = self.chests[0].target_slot, self.chests[-1].target_slot
+        skull_x = (first_slot[0] + last_slot[0]) / 2 + 25
+        skull_y = first_slot[1] + 25
+        self.skull_chest = SkullChest(
+            skull_x, skull_y, 50, self.batch, self.entity_group, on_open=self._spawn_gem,
         )
-        self.diamond_timer = DIAMOND_DISPLAY_TIME
+        self.hint_label.text = "the chest is opening..."
+
+    def _spawn_gem(self):
+        self.phase = "gem"
+        self.gem = Gem(
+            self.skull_chest.sprite.x, self.skull_chest.sprite.y, 50,
+            self.batch, self.entity_group,
+            on_locked=self._gem_locked, stats=self.manager.stats,
+        )
+        self.hint_label.text = "P2: click the gem to wake it | P1: sing its color and hold it"
+
+    def _gem_locked(self):
+        self.phase = "reveal"
+        self.reveal_timer = REVEAL_DISPLAY_TIME
         self.hint_label.text = "you found it! heading back to celebrate soon..."
 
     def on_update(self, dt):
         self.player1.update(dt, self.keys)
         self.player2.update(dt, self.keys)
 
-        if self.solved_all:
-            self.diamond_timer -= dt
-            if self.diamond_timer <= 0:
+        if self.phase == "chests":
+            active_chest = self.chests[self.progress]
+            active_chest.update(dt)
+            near = (
+                active_chest.in_range(self.player1.x, self.player1.y)
+                or active_chest.in_range(self.player2.x, self.player2.y)
+            )
+            active_chest.show_hint(near)
+        elif self.phase == "waiting":
+            self._wait_timer -= dt
+            if self._wait_timer <= 0:
+                self._spawn_skull()
+        elif self.phase == "gem":
+            self.gem.update(dt)
+        elif self.phase == "reveal":
+            self.reveal_timer -= dt
+            if self.reveal_timer <= 0:
                 self.manager.set_state("end", won=True)
-            return
-
-        active_chest = self.chests[self.progress]
-        active_chest.update(dt)
-        near = (
-            active_chest.in_range(self.player1.x, self.player1.y)
-            or active_chest.in_range(self.player2.x, self.player2.y)
-        )
-        active_chest.show_hint(near)
+        # phase == "skull": nothing to tick here, the sprite's own animation
+        # clock drives it and _spawn_gem fires via the on_open callback
 
     def on_draw(self):
         self.batch.draw()
@@ -135,16 +162,17 @@ class TreasureState:
             self.player1.handle_key_press(symbol)
 
     def on_mouse_press(self, x, y, button, modifiers):
-        if self.solved_all:
-            return
-        self.chests[self.progress].on_mouse_press(x, y)
+        if self.phase == "chests":
+            self.chests[self.progress].on_mouse_press(x, y)
+        elif self.phase == "gem":
+            self.gem.on_mouse_press(x, y)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        if self.solved_all:
+        if self.phase != "chests":
             return
         self.chests[self.progress].on_mouse_drag(dx, dy)
 
     def on_mouse_release(self, x, y, button, modifiers):
-        if self.solved_all:
+        if self.phase != "chests":
             return
         self.chests[self.progress].on_mouse_release()

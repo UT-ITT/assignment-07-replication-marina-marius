@@ -4,7 +4,7 @@
 # just straight up drags the real mouse around and clicks it for real (see
 # Controller in there). so instead of reinventing pinch math we let hud.py
 # and the interactables below catch it via on_mouse_press/on_mouse_motion
-# like it's a totally normal click, coordinates just work out that way
+# like its a totally normal click, coordinates just work out that way
 from pyglet.window import key
 
 import config
@@ -55,10 +55,18 @@ class Player2(GridActor):
         for enemy in enemies:
             if not enemy.alive:
                 continue
-            if enemy.x <= x <= enemy.x + enemy.size and enemy.y <= y <= enemy.y + enemy.size:
+            if (
+                enemy.x <= x <= enemy.x + enemy.size
+                and enemy.y <= y <= enemy.y + enemy.size
+            ):
                 return Projectile(
-                    self.x + self.size / 2, self.y + self.size / 2,
-                    enemy.x + enemy.size / 2, enemy.y + enemy.size / 2,
-                    gun.color, batch, group, owner="player2",
+                    self.x + self.size / 2,
+                    self.y + self.size / 2,
+                    enemy.x + enemy.size / 2,
+                    enemy.y + enemy.size / 2,
+                    gun.color,
+                    batch,
+                    group,
+                    owner="player2",
                 )
         return None

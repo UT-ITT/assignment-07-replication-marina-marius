@@ -1,20 +1,39 @@
 # shared "load N numbered PNG frames into a pyglet Animation, anchored
-# center, cached so repeat calls don't re-decode the same images off disk"
+# center, cached so repeat calls don't re-decode the same images off disk" -
 # used by anything that plays a folder-of-frames sprite animation
-# (projectiles, shield tornado, ...)
+# (projectiles, shield tornado, the treasure chamber's skull chest, ...).
+# also a plain single-image loader for sprites that don't animate at all
+# (the color-coded chest sprites - one still image per color, no sequence).
 import pyglet
 
-_cache = {}
+_animation_cache = {}
+_image_cache = {}
 
 
-def load_animation(path_prefix, frame_numbers, duration, loop):
-    key = (path_prefix, frame_numbers, duration, loop)
-    if key not in _cache:
+def load_animation(path_prefix, frame_numbers, duration, loop, name_prefix=""):
+    # filenames are f"{path_prefix}/{name_prefix}{n:03d}.png" - name_prefix
+    # is only needed when the number isn't the whole filename (skull001.png
+    # vs projectile's plain 001.png)
+    key = (path_prefix, name_prefix, frame_numbers, duration, loop)
+    if key not in _animation_cache:
         images = []
         for number in frame_numbers:
-            image = pyglet.image.load(f"{path_prefix}/{number:03d}.png")
+            image = pyglet.image.load(f"{path_prefix}/{name_prefix}{number:03d}.png")
             image.anchor_x = image.width // 2
             image.anchor_y = image.height // 2
             images.append(image)
-        _cache[key] = pyglet.image.Animation.from_image_sequence(images, duration, loop=loop)
-    return _cache[key]
+        _animation_cache[key] = pyglet.image.Animation.from_image_sequence(
+            images, duration, loop=loop
+        )
+    return _animation_cache[key]
+
+
+def load_image(path, anchor_center=True):
+    key = (path, anchor_center)
+    if key not in _image_cache:
+        image = pyglet.image.load(path)
+        if anchor_center:
+            image.anchor_x = image.width // 2
+            image.anchor_y = image.height // 2
+        _image_cache[key] = image
+    return _image_cache[key]

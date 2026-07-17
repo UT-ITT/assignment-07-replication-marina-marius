@@ -18,8 +18,8 @@ TILE_SIZE = 64
 TEXT_COLOR = (240, 240, 240, 255)
 ACCENT_COLOR = (255, 200, 60, 255)
 
-P1_COLOR = (220, 60, 60, 255) # singer, keyboard WASD
-P2_COLOR = (60, 140, 220, 255) # support, gesture / arrow keys
+P1_COLOR = (220, 60, 60, 255)  # singer, keyboard WASD
+P2_COLOR = (60, 140, 220, 255)  # support, gesture / arrow keys
 
 # put this here since its easier to fine tune later while playtesting
 # instead of going into the individual files
@@ -47,11 +47,10 @@ SHIELD_COLORS = [
 # names in the same order as SHIELD_COLORS, so a target color can be
 # announced in text instead of just "go find the right shade yourself"
 SHIELD_COLOR_NAMES = ["Red", "Blue", "Green", "Yellow"]
-# what a "sing to match this color" object shows while it's listening but
+# what a "sing to match this color" object shows while its listening but
 # nobody is actually singing right now, instead of just freezing on
 # whatever color happened to be sung last
 PITCH_SILENCE_COLOR = (120, 120, 120)
-SHIELD_INACTIVE_OPACITY = 60
 # scream this loud (audio_input.current_volume) and you've maxed out the size mechanic
 SHIELD_MAX_VOLUME = 0.5
 # tune-mechanic knobs, nudge these while playtesting the pitch ladder

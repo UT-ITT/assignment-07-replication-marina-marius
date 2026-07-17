@@ -1,4 +1,4 @@
-# P2's gun: C toggles whether it's drawn (mirrors shield.py's F toggle), and
+# P2's gun: C toggles whether its drawn (mirrors shield.py's F toggle), and
 # while unlocked its color live-tracks whatever pitch P1 is singing - same
 # "sing a color" trick as everywhere else, just loaded into bullets this time
 from entities.shield import frequency_to_color

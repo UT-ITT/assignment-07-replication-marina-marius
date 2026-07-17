@@ -32,10 +32,8 @@ class DungeonState:
         )
         self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
-        self.shield = Shield(
-            config.WIN_WIDTH // 2, config.WIN_HEIGHT // 2,
-            self.batch, self.entity_group,
-        )
+        # invisible until P1 actually raises it with F - see Shield.activate
+        self.shield = Shield(self.batch, self.entity_group)
         self.shield_hud = ShieldHud(self.shield, self.batch, self.ui_group)
 
         self.gun = Gun()
@@ -125,9 +123,6 @@ class DungeonState:
         self.manager.window.remove_handlers(self.keys)
 
     def on_update(self, dt):
-        self.shield.follow(
-            self.player1.x + self.player1.size / 2, self.player1.y + self.player1.size / 2,
-        )
         self.shield.update(dt)
         self.shield_hud.sync_with_shield()
         self.gun.update(dt)
@@ -230,6 +225,8 @@ class DungeonState:
             return
         if self.gate is not None and self.gate.on_mouse_press(x, y):
             return
+        if self.shield.on_mouse_press(x, y):
+            return
 
         if self.phase == "combat":
             bullet = self.player2.try_shoot(
@@ -241,3 +238,9 @@ class DungeonState:
                 return
 
         self.player2.try_interact_at(x, y, (self.lever,))
+
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self.shield.on_mouse_drag(dx, dy)
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        self.shield.on_mouse_release()

@@ -17,39 +17,60 @@ EXPLOSION_FRAMES = tuple(range(6, 11))
 
 
 def _flight_animation(folder):
-    return load_animation(f"assets/projectile/{folder}", FLIGHT_FRAMES, FRAME_DURATION, loop=True)
+    return load_animation(
+        f"assets/projectile/{folder}", FLIGHT_FRAMES, FRAME_DURATION, loop=True
+    )
 
 
 def _explosion_animation(folder):
-    return load_animation(f"assets/projectile/{folder}", EXPLOSION_FRAMES, FRAME_DURATION, loop=False)
+    return load_animation(
+        f"assets/projectile/{folder}", EXPLOSION_FRAMES, FRAME_DURATION, loop=False
+    )
 
 
 def circle_rect_overlap(cx, cy, radius, rx, ry, size):
     # closest point on the (axis-aligned) rect to the circle center
     nearest_x = max(rx, min(cx, rx + size))
     nearest_y = max(ry, min(cy, ry + size))
-    return (cx - nearest_x) ** 2 + (cy - nearest_y) ** 2 <= radius ** 2
+    return (cx - nearest_x) ** 2 + (cy - nearest_y) ** 2 <= radius**2
 
 
 class Projectile:
-    def __init__(self, x, y, target_x, target_y, color, batch, group, owner,
-                 speed=config.BULLET_SPEED, radius=config.BULLET_RADIUS):
+    def __init__(
+        self,
+        x,
+        y,
+        target_x,
+        target_y,
+        color,
+        batch,
+        group,
+        owner,
+        speed=config.BULLET_SPEED,
+        radius=config.BULLET_RADIUS,
+    ):
         self.x = x
         self.y = y
         self.color = color
         self.radius = radius
-        self.owner = owner  # "enemy" or "player2", decides what it's allowed to hit
-        self.alive = True      # still flying, still able to hit / be hit
-        self.finished = False  # explosion animation (if any) has played out, safe to drop
+        self.owner = owner  # "enemy" or "player2", decides what its allowed to hit
+        self.alive = True  # still flying, still able to hit / be hit
+        self.finished = (
+            False  # explosion animation (if any) has played out, safe to drop
+        )
 
         dx, dy = target_x - x, target_y - y
-        distance = max(1.0, (dx ** 2 + dy ** 2) ** 0.5)
+        distance = max(1.0, (dx**2 + dy**2) ** 0.5)
         self.vx = dx / distance * speed
         self.vy = dy / distance * speed
 
         self._folder = color_folder(color)
         self.sprite = pyglet.sprite.Sprite(
-            _flight_animation(self._folder), x=x, y=y, batch=batch, group=group,
+            _flight_animation(self._folder),
+            x=x,
+            y=y,
+            batch=batch,
+            group=group,
         )
         self.sprite.scale = config.PROJECTILE_DISPLAY_SIZE / self.sprite.width
         self.sprite.push_handlers(on_animation_end=self._on_explosion_end)
