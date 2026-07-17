@@ -69,14 +69,16 @@ def _tornado_break_animation(folder):
 
 
 class Shield:
-    # a little tornado sprite: 001-005 loops while it still has durability,
-    # 006-009 plays once when duration_left hits zero (it breaks, doesn't
-    # just vanish), then it settles back into a faint idle loop waiting to
-    # be raised again same "off but visible" look the old plain rectangle
-    # had via SHIELD_INACTIVE_OPACITY
-    def __init__(self, x, y, batch, group):
-        self.x = x
-        self.y = y
+    # a little tornado sprite, nonexistent on screen until P1 actually
+    # raises it (F): 001-005 loops while it still has durability, 006-009
+    # plays once when duration_left hits zero (it breaks, doesn't just
+    # vanish), then it hides again until raised fresh. once up, P2 can
+    # pinch/click + drag it around like the overworld crystal it spawns
+    # at P1s position but doesn't keep following P1 after that, P2 owns
+    # its position from there
+    def __init__(self, batch, group):
+        self.x = 0
+        self.y = 0
         self.size = (config.SHIELD_MIN_SIZE + config.SHIELD_MAX_SIZE) / 2
 
         self.active = False
@@ -85,18 +87,18 @@ class Shield:
         self.color = config.SHIELD_COLORS[0]
         self._folder = color_folder(self.color)
         self._breaking = False
+        self._grabbed = False
 
         # keeping score of the notes P1 sang for the pitch-ladder mechanic
         self._tune_notes = []
         self._tune_timer = 0.0
         self._last_bucket = None
 
-        self.sprite = pyglet.sprite.Sprite(
-            _tornado_idle_animation(self._folder), x=x, y=y, batch=batch, group=group,
-        )
-        self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS
-        self.sprite.opacity = config.SHIELD_INACTIVE_OPACITY
-        self.sprite.push_handlers(on_animation_end=self._on_break_animation_end)
+        # sprite only gets built the first time the shield is actually
+        # raised nothing to see (or animate) before that
+        self._batch = batch
+        self._group = group
+        self.sprite = None
 
     def set_mode(self, mode):
         # hud.py calls this the second P2 clicks/pinches a mode button
@@ -105,39 +107,75 @@ class Shield:
         self._tune_timer = 0.0
         self._last_bucket = None
 
-    def follow(self, x, y):
-        # "spawns in front of P1" only means something if it actually stays
-        # in front of P1 without this it just sits wherever it was first
-        # placed while P1 wanders off, which makes blocking bullets pointless
-        self.x = x
-        self.y = y
-        self.sprite.x = x
-        self.sprite.y = y
+    def contains(self, x, y):
+        half = self.size / 2
+        return self.x - half <= x <= self.x + half and self.y - half <= y <= self.y + half
+
+    def on_mouse_press(self, x, y):
+        # P2 mechanic: click/pinch the raised shield to grab it, same deal
+        # as Pushable only takes effect while it's actually up
+        if not self.active:
+            return False
+        if self.contains(x, y):
+            self._grabbed = True
+        return self._grabbed
+
+    def on_mouse_drag(self, dx, dy):
+        if not self._grabbed:
+            return
+        half = self.size / 2
+        self.x = min(max(self.x + dx, half), config.WIN_WIDTH - half)
+        self.y = min(max(self.y + dy, half), config.WIN_HEIGHT - half)
+        self.sprite.x = self.x
+        self.sprite.y = self.y
+
+    def on_mouse_release(self):
+        self._grabbed = False
 
     def blocks(self, color):
         # only a raised, matching-color tornado actually absorbs a bullet
         # anything else is meant to fly straight through it untouched
         return self.active and colors_match(color, self.color)
 
-    def activate(self):
+    def activate(self, x, y):
+        # (re)raising it always spawns fresh beside P1 P2 has to grab it
+        # again to move it off that spot, it doesn't remember where it was
+        # dropped last time. clamped same as a drag, in case the "beside P1"
+        # spot lands past the edge of the screen
+        half = self.size / 2
+        self.x = min(max(x, half), config.WIN_WIDTH - half)
+        self.y = min(max(y, half), config.WIN_HEIGHT - half)
         self.active = True
         self.duration_left = config.SHIELD_DEFAULT_DURATION
         self._breaking = False
-        self.sprite.opacity = 255
-        self.sprite.image = _tornado_idle_animation(self._folder)
+        self._grabbed = False
+
+        if self.sprite is None:
+            self.sprite = pyglet.sprite.Sprite(
+                _tornado_idle_animation(self._folder),
+                x=self.x, y=self.y, batch=self._batch, group=self._group,
+            )
+            self.sprite.push_handlers(on_animation_end=self._on_break_animation_end)
+        else:
+            self.sprite.x = self.x
+            self.sprite.y = self.y
+            self.sprite.image = _tornado_idle_animation(self._folder)
+        self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS
+        self.sprite.visible = True
 
     def deactivate(self):
         self.active = False
         self._breaking = False
-        self.sprite.opacity = config.SHIELD_INACTIVE_OPACITY
-        self.sprite.image = _tornado_idle_animation(self._folder)
+        self._grabbed = False
+        if self.sprite is not None:
+            self.sprite.visible = False
 
-    def toggle(self):
-        # hooked up to the F key
+    def toggle(self, x, y):
+        # hooked up to the F key, x/y is where P1 wants it to appear
         if self.active:
             self.deactivate()
         else:
-            self.activate()
+            self.activate(x, y)
 
     def update(self, dt):
         if not self.active:
@@ -156,17 +194,18 @@ class Shield:
             self._update_tune(audio_input.current_frequency, dt)
 
     def _break(self):
-        # duration ran out mid-fight stops blocking immediately, the
+        # duration ran out mid-fight stops blocking and grabbing
+        # immediately, the break animation is purely cosmetic from here on
         self.active = False
         self._breaking = True
+        self._grabbed = False
         self.sprite.image = _tornado_break_animation(self._folder)
 
     def _on_break_animation_end(self):
         if not self._breaking:
             return  # a fresh activate()/deactivate() already swapped the image, not our event to handle
         self._breaking = False
-        self.sprite.opacity = config.SHIELD_INACTIVE_OPACITY
-        self.sprite.image = _tornado_idle_animation(self._folder)
+        self.sprite.visible = False
 
     def _update_color(self, frequency):
         if frequency <= 0:
