@@ -7,7 +7,7 @@ from world.tilemap import TileMap
 from world.hud import ShieldHud, GunHud, HeartsDisplay, PitchLegend
 from world.interactable import Interactable
 from world.gate import Gate
-from entities.shield import Shield, colors_match
+from entities.shield import Shield
 from entities.gun import Gun
 from entities.player_singer import Player1
 from entities.player_gesture import Player2
@@ -154,7 +154,9 @@ class DungeonState:
         self._resolve_bullets()
 
         self.enemies = [enemy for enemy in self.enemies if enemy.alive]
-        self.bullets = [bullet for bullet in self.bullets if bullet.alive]
+        # keep exploding bullets around until their pop animation finishes,
+        # only "alive" (still flying) ones stop moving/colliding this frame
+        self.bullets = [bullet for bullet in self.bullets if not bullet.finished]
 
         if not self.enemies:
             self._spawn_exit_gate()
@@ -177,12 +179,12 @@ class DungeonState:
                 self._resolve_player_bullet(bullet)
 
     def _resolve_enemy_bullet(self, bullet):
-        if self.shield.active and bullet.hits_rect(
-            self.shield.rect.x, self.shield.rect.y, self.shield.size
+        # only a same-color bullet gets absorbed anything else flies
+        # straight through the tornado like it isn't even there
+        if self.shield.blocks(bullet.color) and bullet.hits_rect(
+            self.shield.x - self.shield.size / 2, self.shield.y - self.shield.size / 2, self.shield.size
         ):
             bullet.destroy()
-            if not colors_match(bullet.color, self.shield.rect.color):
-                self._damage_closest_player(bullet)
             return
 
         if bullet.hits_rect(self.player1.x, self.player1.y, self.player1.size):
@@ -198,11 +200,6 @@ class DungeonState:
                 enemy.take_hit(bullet.color)
                 bullet.destroy()
                 break
-
-    def _damage_closest_player(self, bullet):
-        dist1 = (bullet.x - self.player1.x) ** 2 + (bullet.y - self.player1.y) ** 2
-        dist2 = (bullet.x - self.player2.x) ** 2 + (bullet.y - self.player2.y) ** 2
-        self._lose_heart(self.hearts1 if dist1 <= dist2 else self.hearts2)
 
     def _lose_heart(self, hearts):
         if hearts.lose() <= 0:
