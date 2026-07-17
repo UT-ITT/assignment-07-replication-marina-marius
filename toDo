@@ -26,3 +26,9 @@ still open todos:
  @marius kennst du dich damit aus in pyglet? das wir einfach nur so background music in jedem state laufen lassen können?
 - background/ambient music -> wäre nice
 - sound effects ?????? -> krasses add on aber lassen wir erst weg
+
+current problems:
+- tornado needs to spawn longer
+- hud position should be top right fixed and change ui buttons 
+- moving of shield doesn't work good or at all lol
+- 
