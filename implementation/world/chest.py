@@ -1,27 +1,52 @@
 # here comes the treasure chamber's chest logic: sing it the right color,
 # then drag it onto its marked spot - do both and it's solved. combines the
 # same two tricks world/gate.py and Pushable already know, just on one object
+#
+# sprites: assets/chest/basic001.png is the neutral "no color yet" look,
+# assets/chest/<color>001.png is what it swaps to while P1's live pitch (or
+# the locked-in target) lands on that color same color_folder() bucket
+# gate.py/shield.py already use. assets/chest/skull/skull001-004.png is the
+# one-shot "final chest opening" animation once all 3 are solved.
 import pyglet
 
 import config
-from entities.shield import colors_match, frequency_to_color
+from entities.shield import color_folder, colors_match, frequency_to_color
+from entities.sprite_anim import load_animation, load_image
 from input import audio_input
 from world.gate import LOCK_HOLD_TIME, COLOR_TOLERANCE
 from world.interactable import Interactable
 
 SLOT_TOLERANCE = 24
-LOCKED_COLOR = (60, 60, 60)
+CHEST_SPRITE_PIXELS = 32
+CHEST_BASIC_IMAGE = "assets/chest/basic001.png"
+
+SKULL_FRAME_DURATION = 0.35  # slow and deliberate, not a snappy pop like the projectiles/shield
+SKULL_OPEN_FRAMES = tuple(range(1, 5))
+
+
+def _chest_color_image(folder):
+    return load_image(f"assets/chest/{folder}001.png", anchor_center=False)
+
+
+def _skull_open_animation():
+    return load_animation(
+        "assets/chest/skull", SKULL_OPEN_FRAMES, SKULL_FRAME_DURATION, loop=False, name_prefix="skull"
+    )
 
 
 class Chest(Interactable):
     # states: locked (not its turn) -> idle (its turn, is_active) ->
     # listening (P1 singing) -> colored (locked in, draggable) -> solved
     def __init__(self, x, y, size, target_color, target_slot, batch, group,
-                 on_solved=None, stats=None, **kwargs):
-        kwargs.setdefault("idle_color", LOCKED_COLOR)
-        kwargs.setdefault("hint", "P2: click/pinch to wake it up, then P1: sing its color")
-        super().__init__(x, y, size, batch, group, **kwargs)
+                 on_solved=None, stats=None, hint="P2: click/pinch to wake it up, then P1: sing its color"):
+        # not calling Interactable.__init__ chests render via a color-
+        # swapping sprite, not the base rectangle, so theres nothing to
+        # reuse there besides x/y/size and the hint label, built directly below
+        self.x = x
+        self.y = y
+        self.size = size
         self.target_color = target_color
+        self.target_folder = color_folder(target_color)
         self.color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(target_color)]
         self.target_slot = target_slot
         self.on_solved = on_solved
@@ -34,6 +59,20 @@ class Chest(Interactable):
         self.grabbed = False
         self._match_timer = 0.0
 
+        self.sprite = pyglet.sprite.Sprite(
+            load_image(CHEST_BASIC_IMAGE, anchor_center=False),
+            x=x, y=y, batch=batch, group=group,
+        )
+        self.sprite.scale = size / CHEST_SPRITE_PIXELS
+
+        self.hint_label = pyglet.text.Label(
+            hint, x=x + size / 2, y=y + size + 10,
+            anchor_x="center", anchor_y="bottom",
+            font_size=11, color=(255, 255, 255, 255),
+            batch=batch, group=group,
+        )
+        self.hint_label.visible = False
+
         # outline showing where this chest actually belongs, visible from the start
         self.slot_marker = pyglet.shapes.BorderedRectangle(
             target_slot[0], target_slot[1], size, size, border=3,
@@ -42,9 +81,9 @@ class Chest(Interactable):
         )
 
     def activate(self):
-        # TreasureState calls this once it's this chest turn in the sequence
+        # TreasureState calls this once its this chest turn in the sequence
         self.is_active = True
-        self.rect.color = config.PITCH_SILENCE_COLOR
+        self.sprite.image = load_image(CHEST_BASIC_IMAGE, anchor_center=False)
 
     def on_mouse_press(self, x, y):
         if not self.is_active or self.solved or not self.contains(x, y):
@@ -61,8 +100,8 @@ class Chest(Interactable):
             return
         self.x = min(max(self.x + dx, 0), config.WIN_WIDTH - self.size)
         self.y = min(max(self.y + dy, 0), config.WIN_HEIGHT - self.size)
-        self.rect.x = self.x
-        self.rect.y = self.y
+        self.sprite.x = self.x
+        self.sprite.y = self.y
         self.hint_label.x = self.x + self.size / 2
         self.hint_label.y = self.y + self.size + 10
 
@@ -77,7 +116,7 @@ class Chest(Interactable):
         if abs(self.x - slot_x) > SLOT_TOLERANCE or abs(self.y - slot_y) > SLOT_TOLERANCE:
             return
         self.x, self.y = slot_x, slot_y
-        self.rect.x, self.rect.y = slot_x, slot_y
+        self.sprite.x, self.sprite.y = slot_x, slot_y
         self.solved = True
         self.hint_label.visible = False
         if self.on_solved:
@@ -90,11 +129,11 @@ class Chest(Interactable):
         frequency = audio_input.current_frequency
         if frequency <= 0:
             self._match_timer = 0.0
-            self.rect.color = config.PITCH_SILENCE_COLOR
+            self.sprite.image = load_image(CHEST_BASIC_IMAGE, anchor_center=False)
             return
 
         color = frequency_to_color(frequency)
-        self.rect.color = color
+        self.sprite.image = _chest_color_image(color_folder(color))
 
         matched = colors_match(color, self.target_color, COLOR_TOLERANCE)
         if self.stats:
@@ -110,5 +149,33 @@ class Chest(Interactable):
     def _lock_color(self):
         self.colored = True
         self.listening = False
-        self.rect.color = self.target_color[:3]
+        self.sprite.image = _chest_color_image(self.target_folder)
         self.hint_label.text = "P2: click/pinch + drag it onto its marked spot"
+
+    def delete(self):
+        self.sprite.delete()
+        self.slot_marker.delete()
+        self.hint_label.delete()
+
+
+class SkullChest:
+    # spawns once all 3 color chests are solved: plays the opening animation
+    # once (slowly this is the payoff, not a quick pop), then just sits on
+    # the last frame. on_open fires the instant that animation finishes, so
+    # whoever owns this can spawn the diamond right on cue
+    def __init__(self, x, y, size, batch, group, on_open=None):
+        self.on_open = on_open
+        self.opened = False
+        self.sprite = pyglet.sprite.Sprite(
+            _skull_open_animation(), x=x, y=y, batch=batch, group=group,
+        )
+        self.sprite.scale = size / CHEST_SPRITE_PIXELS
+        self.sprite.push_handlers(on_animation_end=self._on_open_end)
+
+    def _on_open_end(self):
+        self.opened = True
+        if self.on_open:
+            self.on_open()
+
+    def delete(self):
+        self.sprite.delete()
