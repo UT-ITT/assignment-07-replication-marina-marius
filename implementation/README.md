@@ -59,3 +59,5 @@ TODO:
 - ruin: https://craftpix.net/download/107610/
 - https://kenney.nl/assets/tiny-dungeon
 - https://opengameart.org/content/gem-icons-0
+- projectiles: https://pimen.itch.io/magical-animation-effects?__cf_chl_tk=WPC4MVda3nuvSvSu0.jML0moKodloZaz7RZJ98iUr3Y-1784286481-1.0.1.1-W2BH6zjARJbeqOtL_VRFk_JVZhwMaEBySsNUOToDago
+- tornado: https://foozlecc.itch.io/pixel-magic-sprite-effects
