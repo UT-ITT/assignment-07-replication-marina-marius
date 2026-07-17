@@ -57,3 +57,5 @@ TODO:
 - chapell: https://craftpix.net/download/100511/
 - dungeon2: https://craftpix.net/download/80859/
 - ruin: https://craftpix.net/download/107610/
+- https://kenney.nl/assets/tiny-dungeon
+- https://opengameart.org/content/gem-icons-0
