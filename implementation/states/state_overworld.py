@@ -88,6 +88,14 @@ class OverworldState:
             )
             interactable.show_hint(near)
 
+        # gate unlocked color alone doesn't open it anymore, both P1 and
+        # P2 have to physically walk in, whoevers first just disappears
+        # until the other catches up (see Gate.try_enter)
+        if self.gate.try_enter(self.player1, self.player1.x, self.player1.y):
+            self.player1.rect.visible = False
+        if self.gate.try_enter(self.player2, self.player2.x, self.player2.y):
+            self.player2.rect.visible = False
+
     def on_draw(self):
         self.batch.draw()
 

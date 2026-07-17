@@ -98,6 +98,12 @@ class DungeonState:
     def _start_combat(self):
         self.phase = "combat"
         self.gate = None
+        # both players just walked through the entry gate and disappeared
+        # doing it same DungeonState keeps using them for the fight, so
+        # bring them back unlike the overworld/treasure transitions this
+        # doesn't rebuild fresh Player1/Player2 objects
+        self.player1.rect.visible = True
+        self.player2.rect.visible = True
         count = random.randint(config.ENEMY_COUNT_MIN, config.ENEMY_COUNT_MAX)
         for _ in range(count):
             x = random.uniform(100, config.WIN_WIDTH - 150)
@@ -132,6 +138,13 @@ class DungeonState:
 
         if self.gate is not None:
             self.gate.update(dt)
+            # gate unlocked color alone doesnt open it anymore, both P1
+            # and P2 have to physically walk in, whoever first just
+            # disappears until the other catches up (see Gate.try_enter)
+            if self.gate.try_enter(self.player1, self.player1.x, self.player1.y):
+                self.player1.rect.visible = False
+            if self.gate.try_enter(self.player2, self.player2.x, self.player2.y):
+                self.player2.rect.visible = False
 
         if self.phase == "combat":
             self._update_combat(dt)

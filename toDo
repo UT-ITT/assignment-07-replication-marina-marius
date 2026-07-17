@@ -10,7 +10,6 @@ am besten so das finetuning von parametern immer wie tunnhöhe und gesture solan
 still open todos:
 - enemy sprite
 - p1 and p2 sprites
-- gate sprite
 - overworld background/tilemap (still flat color, real .tmx files unused)
 - treasure chamber background/tilemap (still flat color)
 - dungeon obstacle sprites
