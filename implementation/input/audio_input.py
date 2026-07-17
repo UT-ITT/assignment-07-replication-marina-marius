@@ -3,12 +3,12 @@ import sounddevice as sd
 import queue
 import threading
 
-chunk_size = 1024 
-rate = 44100 
+chunk_size = 2048
+rate = 22050
 channels = 1
-threshold = 0.1
-min_freq = 500
-high_freq = 3000
+threshold = 0.03
+min_freq = 70
+high_freq = 1000
 
 # global variables for game access
 current_frequency = 0.0
@@ -66,7 +66,7 @@ def start_audio_stream():
                     # perform fast fourier transform
                     fft_result = np.fft.rfft(windowed_data)
                     magnitudes = np.abs(fft_result)
-                    frequencies = np.fft.rfftfreq(1024, 1.0/44100)
+                    frequencies = np.fft.rfftfreq(chunk_size, 1.0/rate)
                     
                     # ignore frequencies outside valid range
                     valid_mask = (frequencies >= min_freq) & (frequencies <= high_freq)
