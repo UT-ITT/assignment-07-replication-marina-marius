@@ -31,15 +31,25 @@ class Player1(GridActor):
         super().__init__(x, y, config.P1_COLOR[:3], batch, group)
         # not every screen has a shield (looking at you, overworld), so this can stay None
         self.shield = shield
+        self.facing = (0, -1)  # facing down until P1 first moves, same as most top-down games
 
     def update(self, dt, keys):
         dy = self.axis_from_keys(keys, key.S, key.W)
         dx = 0 if dy != 0 else self.axis_from_keys(keys, key.A, key.D)
+        if dx or dy:
+            self.facing = (dx, dy)
         self.step_towards(dt, dx, dy)
 
     def handle_key_press(self, symbol, interactables=()):
         if symbol == key.F and self.shield is not None:
-            self.shield.toggle()
+            # raising it always spawns fresh beside P1, one tile out in
+            # whichever direction P1 is currently facing see Shield.activate
+            center_x, center_y = self.x + self.size / 2, self.y + self.size / 2
+            face_x, face_y = self.facing
+            self.shield.toggle(
+                center_x + face_x * config.TILE_SIZE,
+                center_y + face_y * config.TILE_SIZE,
+            )
         elif symbol == key.E:
             self.try_interact(interactables)
 
