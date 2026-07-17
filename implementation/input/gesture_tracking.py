@@ -77,6 +77,18 @@ cursor_y = 0
 is_pinching = False
 is_tracking = False
 
+# a synthetic click only actually reaches on_mouse_press if the game window
+# is already key/frontmost - Cocoa treats the first click on a background
+# window as "just focus it" and swallows the click itself (pyglet doesn't
+# opt out of that default via acceptsFirstMouse:), so a pinch happening
+# while some other window (e.g. the hand-tracking preview) is focused
+# looks like it did nothing everywhere except P2's own pinch-glow, which
+# reads straight off is_pinching and needs no window event at all. this
+# thread can't safely call AppKit itself (window activation has to happen
+# on the main thread), so it just raises a flag here for main.py's
+# already-main-thread update() to actually call window.activate() on
+activation_requested = False
+
 # hand connections for drawing
 hand_connections = [
     (0, 1), (1, 2), (2, 3), (3, 4),           
@@ -114,10 +126,17 @@ def clamp(value, low, high):
         return high
     return value
 
-def landmark_to_screen(landmark, screen_width, screen_height):
-    x = int(clamp(landmark.x, 0.0, 1.0) * screen_width)
-    y = int(clamp(landmark.y, 0.0, 1.0) * screen_height)
+def landmark_to_screen(norm_x, norm_y, screen_width, screen_height):
+    x = int(clamp(norm_x, 0.0, 1.0) * screen_width)
+    y = int(clamp(norm_y, 0.0, 1.0) * screen_height)
     return x, y
+
+
+# raw per-frame landmark position is noisy enough on its own to make the
+# cursor visibly shake even when the hand is basically still, smoothing it
+# with an EMA (see hand_loop's smoothed_x/smoothed_y) kills that jitter
+# without adding the kind of lag a bigger position-history average would
+CURSOR_SMOOTHING = 0.4
 
 def lerp(start, end, amount):
     return start + (end - start) * amount
@@ -134,15 +153,25 @@ def interpolate_points(start_point, end_point, steps):
 def choose_pointer_landmark(hand_landmarks):
     return hand_landmarks[8]
 
-def check_pinch(hand_landmarks):
+# two different thresholds instead of one: a single cutoff means finger
+# jitter that straddles it makes check_pinch flicker true/false several
+# times a frame apart, which in turn made click_via_landmark fire
+# press/release/press/release instead of one clean "held" click - a real
+# click-and-drag needs the pinch to *stay* registered while the fingers
+# are close, not just the instant they cross a line. entering needs a
+# tighter pinch than leaving needs a release, so once you're pinched,
+# small jitter can't push the distance back over a single shared line
+PINCH_ENTER_DISTANCE = 0.045
+PINCH_EXIT_DISTANCE = 0.07
+
+def check_pinch(hand_landmarks, currently_pinching=False):
     index_tip = hand_landmarks[8]
     thumb_tip = hand_landmarks[4]
     distance = ((index_tip.x - thumb_tip.x) ** 2 + (index_tip.y - thumb_tip.y) ** 2) ** 0.5
-    return distance < 0.05
+    threshold = PINCH_EXIT_DISTANCE if currently_pinching else PINCH_ENTER_DISTANCE
+    return distance < threshold
 
-def click_via_landmark(hand_landmarks, mouse, is_left_pressed):
-    pinching = check_pinch(hand_landmarks)
-
+def click_via_landmark(pinching, mouse, is_left_pressed):
     if pinching and not is_left_pressed:
         mouse.press(Button.left)
         is_left_pressed = True
@@ -220,7 +249,9 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
     previous_point = None
     last_move_time = time.time()
     is_left_pressed = False
-    
+    smoothed_x = None
+    smoothed_y = None
+
     while is_tracking:
         success, frame = capture.read()
         if not success:
@@ -235,13 +266,32 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
 
         if results.hand_landmarks:
             hand_landmarks = results.hand_landmarks[0]
-            
+
+            # keep requesting activation every tracked frame, not just the
+            # instant a pinch fires - the actual mouse-down CGEvent goes out
+            # immediately from this thread, main.py's update() only gets to
+            # act on the flag on its next tick, so waiting until press time
+            # to ask for activation is already one frame too late for that
+            # click. asking continuously means the window is already key by
+            # the time a real pinch happens instead of chasing it after
+            global activation_requested
+            activation_requested = True
+
             if show_video:
                 draw_landmarks(frame, hand_landmarks)
 
             # update cursor position (window-relative, for anything that wants to read it)
+            # smoothed against the *previous* frame's landmark first - the raw
+            # per-frame landmark alone is jittery enough to make the cursor
+            # visibly shake even holding the hand still, which made a "click
+            # and hold" drag wobble instead of tracking cleanly
             pointer_landmark = choose_pointer_landmark(hand_landmarks)
-            cx, cy = landmark_to_screen(pointer_landmark, screen_width, screen_height)
+            if smoothed_x is None:
+                smoothed_x, smoothed_y = pointer_landmark.x, pointer_landmark.y
+            else:
+                smoothed_x = lerp(smoothed_x, pointer_landmark.x, CURSOR_SMOOTHING)
+                smoothed_y = lerp(smoothed_y, pointer_landmark.y, CURSOR_SMOOTHING)
+            cx, cy = landmark_to_screen(smoothed_x, smoothed_y, screen_width, screen_height)
             cursor_x = cx
             cursor_y = cy
 
@@ -264,12 +314,18 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
 
                 previous_point = current_point
             
-            # update pinch state
-            is_pinching = check_pinch(hand_landmarks)
-            is_left_pressed = click_via_landmark(hand_landmarks, mouse, is_left_pressed)
+            # update pinch state - computed once with hysteresis (see
+            # check_pinch) and shared by both the visual flag and the actual
+            # click, so they can't disagree with each other frame to frame
+            is_pinching = check_pinch(hand_landmarks, is_pinching)
+            is_left_pressed = click_via_landmark(is_pinching, mouse, is_left_pressed)
         else:
-            # reset pinch when no hands detected
+            # reset pinch and cursor smoothing when no hands detected, a
+            # stale smoothed position would otherwise make the cursor drag
+            # itself back on screen the moment the hand reappears
             is_pinching = False
+            smoothed_x = None
+            smoothed_y = None
             if is_left_pressed:
                 mouse.release(Button.left)
                 is_left_pressed = False

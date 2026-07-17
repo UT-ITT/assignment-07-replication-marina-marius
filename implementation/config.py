@@ -58,6 +58,15 @@ SHIELD_TUNE_BOOST = 2.0
 SHIELD_TUNE_PENALTY = 1.5
 SHIELD_TUNE_SEQUENCE_TIMEOUT = 2.0
 
+# melody-gate knobs (idea.md's "final gate": sing a short note sequence
+# instead of holding one pitch) - length is randomized per gate between
+# these two, and singing nothing (or holding one note) for longer than the
+# timeout wipes whatever progress was made so far, same idea as the shield
+# tune mechanic's sequence timeout above
+MELODY_LENGTH_MIN = 2
+MELODY_LENGTH_MAX = 4
+MELODY_NOTE_TIMEOUT = 2.0
+
 # dungeon combat
 ENEMY_COUNT_MIN = 3
 ENEMY_COUNT_MAX = 10

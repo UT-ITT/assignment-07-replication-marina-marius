@@ -86,6 +86,15 @@ def update(dt):
     global debug_color, debug_pitch
 
     manager.update(dt)
+
+    # a synthetic click from gesture_tracking only reaches on_mouse_press if
+    # this window is already key/frontmost (Cocoa treats the first click on
+    # a background window as "just focus it", swallowing the click itself),
+    # so keep it activated while a hand is being tracked - the tracking
+    # thread can't safely call AppKit itself, it just raises this flag
+    if gesture_tracking.activation_requested:
+        gesture_tracking.activation_requested = False
+        window.activate()
     # TODO: once states actually consume these, feed them in here, e.g.
     # freq = audio_input.current_frequency
     # vol = audio_input.current_volume
@@ -118,10 +127,19 @@ def main():
     # 1920x1080-at-(0,0) guess, matters as soon as the window isn't fullscreen
     # on the primary display (see bugs.md)
     window_x, window_y = window.get_location()
+    # the preview is its own real OS window living in the same process as
+    # the game window - cv2.imshow() re-draws/re-shows it every single
+    # camera frame from the background tracking thread, which on macOS
+    # keeps stealing key-window status away from the game window. Cocoa
+    # treats the first click on a non-key window as "just focus it" and
+    # swallows the click itself, so with the preview constantly winning
+    # that race, every gesture click landed on an unfocused game window and
+    # never reached on_mouse_press. only worth the focus fight when
+    # actually debugging hand tracking itself
     gesture_tracking.start_tracking(
         screen_width=window.width, screen_height=window.height,
         origin_x=window_x, origin_y=window_y,
-        show_video=True, video_id=video_id,
+        show_video=args.debug, video_id=video_id,
     )
 
     if args.debug:

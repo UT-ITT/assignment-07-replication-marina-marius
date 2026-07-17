@@ -58,6 +58,14 @@ class Projectile:
         self.finished = (
             False  # explosion animation (if any) has played out, safe to drop
         )
+        # pyglet fires on_animation_end every time a *looping* animation
+        # wraps around too, not just once for a one-shot one (see
+        # pyglet/sprite.py's _animate) - the in-flight animation loops the
+        # whole time this bullet is alive, so without this flag
+        # _on_explosion_end would fire (and delete the sprite) every lap of
+        # the flight loop, not just when destroy() actually starts the
+        # one-shot explosion animation
+        self._exploding = False
 
         dx, dy = target_x - x, target_y - y
         distance = max(1.0, (dx**2 + dy**2) ** 0.5)
@@ -95,11 +103,14 @@ class Projectile:
             return
         self.alive = False
         if explode:
+            self._exploding = True
             self.sprite.image = _explosion_animation(self._folder)
         else:
             self.finished = True
             self.sprite.delete()
 
     def _on_explosion_end(self):
+        if not self._exploding:
+            return  # the looping flight animation just lapped, not a real explosion
         self.finished = True
         self.sprite.delete()

@@ -87,12 +87,14 @@ class DungeonState:
         self.keys = key.KeyStateHandler()
         self._spawn_gate(self._start_combat)
 
-    def _spawn_gate(self, on_unlock):
-        # same crystal mechanic for both "start the fight" and "leave the room"
+    def _spawn_gate(self, on_unlock, melody=False):
+        # same crystal mechanic for both "start the fight" and "leave the
+        # room" - the exit gate is idea.md's "final gate" though, so it
+        # gets a sung melody (see world/gate.py) instead of one held pitch
         self.gate = Gate(
             config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 40, 80,
             self.batch, self.entity_group, on_unlock=on_unlock,
-            stats=self.manager.stats,
+            melody=melody, stats=self.manager.stats,
         )
 
     def _start_combat(self):
@@ -116,8 +118,8 @@ class DungeonState:
 
     def _spawn_exit_gate(self):
         self.phase = "cleared"
-        self._spawn_gate(self._enter_treasure)
-        self.hint_label.text = "room clear - P2: wake the exit crystal | P1: sing it open"
+        self._spawn_gate(self._enter_treasure, melody=True)
+        self.hint_label.text = "room clear - P2: wake the exit crystal | P1: sing its melody to open it"
 
     def _enter_treasure(self):
         self.manager.set_state("treasure")

@@ -24,8 +24,11 @@ TORNADO_BREAK_FRAMES = tuple(range(6, 10))
 TORNADO_SPRITE_PIXELS = 64  # source frames are 64x64, self.size scales from that
 
 
-def _frequency_bucket(frequency):
-    # squishes whatever pitch audio_input picked up into one of the SHIELD_COLORS slots
+def frequency_bucket(frequency):
+    # squishes whatever pitch audio_input picked up into one of the SHIELD_COLORS
+    # slots exported (not just used internally by _update_tune below) so a
+    # "sing a sequence of notes" mechanic like the melody gate can compare
+    # sung notes without going through a color at all
     span = audio_input.high_freq - audio_input.min_freq
     normalized = (frequency - audio_input.min_freq) / span
     normalized = max(0.0, min(1.0, normalized))
@@ -36,7 +39,7 @@ def _frequency_bucket(frequency):
 def frequency_to_color(frequency):
     # same pitch->color mapping the shield uses, exported so gate.py (and
     # anything else that wants "sing a color") doesn't reinvent this
-    return config.SHIELD_COLORS[_frequency_bucket(frequency)]
+    return config.SHIELD_COLORS[frequency_bucket(frequency)]
 
 
 def colors_match(color, target, tolerance=35):
@@ -248,7 +251,7 @@ class Shield:
             self._last_bucket = None
             return
 
-        bucket = _frequency_bucket(frequency)
+        bucket = frequency_bucket(frequency)
         if bucket == self._last_bucket:
             return  # still holding the same note, don't count it twice
 

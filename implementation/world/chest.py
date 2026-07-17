@@ -100,15 +100,18 @@ class Chest(Interactable):
         )
         self.hint_label.visible = False
 
-        # outline showing where this chest actually belongs, visible from the start
-        self.slot_marker = pyglet.shapes.BorderedRectangle(
+        # outline showing where this chest actually belongs, visible from the
+        # start - a plain Box, not BorderedRectangle: that one only supports
+        # a single alpha shared between fill and border, so a transparent
+        # fill (alpha 0) was silently zeroing the border out too, making the
+        # whole marker invisible
+        self.slot_marker = pyglet.shapes.Box(
             target_slot[0],
             target_slot[1],
             size,
             size,
-            border=3,
-            color=(0, 0, 0, 0),
-            border_color=target_color[:3],
+            thickness=3,
+            color=target_color[:3],
             batch=batch,
             group=group,
         )

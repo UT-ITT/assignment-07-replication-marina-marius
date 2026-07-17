@@ -18,12 +18,12 @@ import random
 import pyglet
 
 import config
-from entities.shield import color_folder, colors_match, frequency_to_color
+from entities.shield import color_folder, colors_match, frequency_bucket, frequency_to_color
 from entities.sprite_anim import load_animation, load_image
 from input import audio_input
 from world.interactable import Interactable
 
-LOCK_HOLD_TIME = 2.0
+LOCK_HOLD_TIME = 0.5
 COLOR_TOLERANCE = 35
 GATE_SPRITE_PIXELS = 32
 GATE_FRAME_DURATION = 0.12
@@ -40,13 +40,34 @@ def _gate_listening_image(folder):
     return load_image(f"assets/gate/{folder}/tile000.png", anchor_center=False)
 
 
+def random_melody(length=None):
+    # picks a length between MELODY_LENGTH_MIN/MAX (unless the caller wants
+    # a specific one) and a bucket index (0..len(SHIELD_COLORS)-1, same
+    # buckets frequency_bucket() sorts sung pitches into) per note, never
+    # repeating the previous note back to back - two notes in a row landing
+    # on the same bucket would be indistinguishable from just holding one
+    # note, so the sequence wouldn't be singable as a *sequence*
+    length = length or random.randint(config.MELODY_LENGTH_MIN, config.MELODY_LENGTH_MAX)
+    note_count = len(config.SHIELD_COLORS)
+    melody = []
+    for _ in range(length):
+        choices = [b for b in range(note_count) if b != (melody[-1] if melody else None)]
+        melody.append(random.choice(choices))
+    return melody
+
+
 class Gate(Interactable):
-    # P2 clicks/pinches to wake it up, then P1 sings its target color until
-    # it locks, then both P1 and P2 have to walk into it - shared by the
-    # overworld gate and the dungeon's entry/exit gates, so this mechanic
-    # only gets built once
+    # P2 clicks/pinches to wake it up, then P1 sings it open, then both P1
+    # and P2 have to walk into it - shared by the overworld gate and the
+    # dungeon's entry/exit gates, so this mechanic only gets built once.
+    # two flavors of "sing it open", picked by whether melody is given:
+    #   - plain gate (melody=None): hold the single target_color pitch for
+    #     LOCK_HOLD_TIME straight
+    #   - melody gate (melody=[...]): sing that list of note buckets in
+    #     order, one stable note at a time (see _update_melody) - idea.md's
+    #     "final gate" mechanic, pass melody=True to have one generated
     def __init__(self, x, y, size, batch, group, on_unlock=None,
-                 target_color=None, stats=None,
+                 target_color=None, melody=None, stats=None,
                  hint="P2: click/pinch to wake it up, then P1: sing its color"):
         # not calling Interactable.__init__ - gates render via a sprite,
         # not the base rectangle, same deal as Chest/Gem. contains()/
@@ -56,20 +77,24 @@ class Gate(Interactable):
         self.y = y
         self.size = size
 
-        # ---- color-matching target -----------------------------------
-        # NOTE for whoever builds the melody mechanic (idea.md wants the
-        # gate to eventually check a short SUNG SEQUENCE instead of one
-        # held pitch): target_color/color_name/COLOR_TOLERANCE below are
-        # only used by the single-sustained-pitch check in update(). swap
-        # that out for a sequence buffer (Shield._update_tune in
-        # entities/shield.py already buffers stable notes the same way a
-        # melody check would need to) and call self._lock() once the
-        # sequence matches - _lock() is the single entry point everything
-        # downstream (the walk-in requirement, on_unlock) depends on, and
-        # it doesn't care *how* the gate decided it's unlocked.
-        self.target_color = target_color or random.choice(config.SHIELD_COLORS)
-        self.target_folder = color_folder(self.target_color)
-        self.color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(self.target_color)]
+        # ---- unlock target: single color, or a melody of them ---------
+        self.melody = random_melody() if melody is True else melody
+        if self.melody:
+            self.target_color = None
+            # unlocked glow just borrows the last note's color folder,
+            # nothing about "unlocked" needs its own asset
+            self.target_folder = color_folder(config.SHIELD_COLORS[self.melody[-1]])
+            self.color_name = " - ".join(
+                config.SHIELD_COLOR_NAMES[bucket] for bucket in self.melody
+            )
+            self._melody_progress = 0
+            self._last_bucket = None
+            self._note_timer = 0.0
+        else:
+            self.target_color = target_color or random.choice(config.SHIELD_COLORS)
+            self.target_folder = color_folder(self.target_color)
+            self.color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(self.target_color)]
+
         self.on_unlock = on_unlock
         # optional GameStats if given, every sung frame while listening
         # counts toward the end screen's pitch accuracy ratio
@@ -99,7 +124,10 @@ class Gate(Interactable):
         if self.locked or not self.contains(x, y):
             return False
         self.listening = True
-        self.hint_label.text = f"P1: sing {self.color_name.upper()} to unlock it!"
+        if self.melody:
+            self.hint_label.text = f"P1: sing {self.color_name.upper()} in order to unlock it!"
+        else:
+            self.hint_label.text = f"P1: sing {self.color_name.upper()} to unlock it!"
         self.sprite.image = _gate_listening_image("basic")
         return True
 
@@ -107,6 +135,12 @@ class Gate(Interactable):
         if not self.listening or self.locked:
             return
 
+        if self.melody:
+            self._update_melody(dt)
+        else:
+            self._update_single_pitch(dt)
+
+    def _update_single_pitch(self, dt):
         frequency = audio_input.current_frequency
         if frequency <= 0:
             self._match_timer = 0.0
@@ -126,6 +160,53 @@ class Gate(Interactable):
                 self._lock()
         else:
             self._match_timer = 0.0
+
+    def _update_melody(self, dt):
+        frequency = audio_input.current_frequency
+        if frequency <= 0:
+            self._last_bucket = None
+            self.sprite.image = _gate_listening_image("basic")
+        else:
+            self.sprite.image = _gate_listening_image(color_folder(frequency_to_color(frequency)))
+
+        # silence (or just sitting on one held note) for too long wipes
+        # whatever's been sung so far, same idea as Shield._update_tune's
+        # sequence timeout - keeps a stale first note from counting forever
+        self._note_timer += dt
+        if self._melody_progress and self._note_timer > config.MELODY_NOTE_TIMEOUT:
+            self._melody_progress = 0
+            self._last_bucket = None
+            self._note_timer = 0.0
+            self.hint_label.text = f"P1: sing {self.color_name.upper()} in order to unlock it!"
+
+        if frequency <= 0:
+            return
+
+        bucket = frequency_bucket(frequency)
+        if bucket == self._last_bucket:
+            return  # still holding the same note, don't count it twice
+
+        self._last_bucket = bucket
+        self._note_timer = 0.0
+
+        expected = self.melody[self._melody_progress]
+        matched = bucket == expected
+        if self.stats:
+            self.stats.record_pitch_sample(matched)
+
+        if matched:
+            self._melody_progress += 1
+            if self._melody_progress >= len(self.melody):
+                self._lock()
+            else:
+                self.hint_label.text = (
+                    f"{self._melody_progress}/{len(self.melody)} - keep going: "
+                    f"{self.color_name.upper()}"
+                )
+        else:
+            # wrong note - start the sequence over from scratch
+            self._melody_progress = 0
+            self.hint_label.text = f"P1: sing {self.color_name.upper()} in order to unlock it!"
 
     def _lock(self):
         self.locked = True
