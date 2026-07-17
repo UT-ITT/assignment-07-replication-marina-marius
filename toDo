@@ -6,3 +6,23 @@ gesture input machen (ziehen/schieben/klicken)
 yes! lass 4 farebn nur machen gelb grün rot blau vorerst und das könnenw ir erweitern am ende zur not??
 
 am besten so das finetuning von parametern immer wie tunnhöhe und gesture solange ich alles reinklatsche
+
+still open todos:
+- enemy sprite
+- p1 and p2 sprites
+- gate sprite
+- overworld background/tilemap (still flat color, real .tmx files unused)
+- treasure chamber background/tilemap (still flat color)
+- dungeon obstacle sprites
+- ui sprites (buttons, hearts, pitch legend)
+- start menu title/logo art
+- end screen art
+- lever sprite
+- collision/walkability (players walk through walls)
+- animated tiles (water/fire/traps in the .tmx files are static right now)
+- melody gate mechanic (sing a short note sequence) from idea.md
+- remove dev shortcut keys (ENTER/O) once real win/lose is trusted
+- clean up unused health/damage constants in config.py
+ @marius kennst du dich damit aus in pyglet? das wir einfach nur so background music in jedem state laufen lassen können?
+- background/ambient music -> wäre nice
+- sound effects ?????? -> krasses add on aber lassen wir erst weg
