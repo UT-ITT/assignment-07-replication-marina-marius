@@ -44,7 +44,7 @@ def random_melody(length=None):
     # picks a length between MELODY_LENGTH_MIN/MAX (unless the caller wants
     # a specific one) and a bucket index (0..len(SHIELD_COLORS)-1, same
     # buckets frequency_bucket() sorts sung pitches into) per note, never
-    # repeating the previous note back to back - two notes in a row landing
+    # repeating the previous note back to back two notes in a row landing
     # on the same bucket would be indistinguishable from just holding one
     # note, so the sequence wouldn't be singable as a *sequence*
     length = length or random.randint(config.MELODY_LENGTH_MIN, config.MELODY_LENGTH_MAX)
@@ -57,17 +57,23 @@ def random_melody(length=None):
 
 
 class Gate(Interactable):
-    # P2 clicks/pinches to wake it up, then P1 sings it open, then both P1
-    # and P2 have to walk into it - shared by the overworld gate and the
-    # dungeon's entry/exit gates, so this mechanic only gets built once.
-    # two flavors of "sing it open", picked by whether melody is given:
+    # P2 clicks/pinches to wake it up, then P1 sings it open, then (if
+    # walk_in_required) both P1 and P2 have to walk into it shared by the
+    # overworld gate and the dungeon's entry/exit gates, so this mechanic
+    # only gets built once. two flavors of "sing it open", picked by
+    # whether melody is given:
     #   - plain gate (melody=None): hold the single target_color pitch for
     #     LOCK_HOLD_TIME straight
     #   - melody gate (melody=[...]): sing that list of note buckets in
     #     order, one stable note at a time (see _update_melody) - idea.md's
     #     "final gate" mechanic, pass melody=True to have one generated
+    #
+    # walk_in_required=False is for triggers that aren't actually a door
+    # you step through (the dungeon's entry crystal just needs to be sung
+    # to start the fight) on_unlock fires the instant it locks, same as
+    # before the walk-in mechanic existed, try_enter() becomes a no-op
     def __init__(self, x, y, size, batch, group, on_unlock=None,
-                 target_color=None, melody=None, stats=None,
+                 target_color=None, melody=None, stats=None, walk_in_required=True,
                  hint="P2: click/pinch to wake it up, then P1: sing its color"):
         # not calling Interactable.__init__ - gates render via a sprite,
         # not the base rectangle, same deal as Chest/Gem. contains()/
@@ -76,6 +82,7 @@ class Gate(Interactable):
         self.x = x
         self.y = y
         self.size = size
+        self.walk_in_required = walk_in_required
 
         # ---- unlock target: single color, or a melody of them ---------
         self.melody = random_melody() if melody is True else melody
@@ -171,7 +178,7 @@ class Gate(Interactable):
 
         # silence (or just sitting on one held note) for too long wipes
         # whatever's been sung so far, same idea as Shield._update_tune's
-        # sequence timeout - keeps a stale first note from counting forever
+        # sequence timeout keeps a stale first note from counting forever
         self._note_timer += dt
         if self._melody_progress and self._note_timer > config.MELODY_NOTE_TIMEOUT:
             self._melody_progress = 0
@@ -212,14 +219,20 @@ class Gate(Interactable):
         self.locked = True
         self.listening = False
         self.sprite.image = _gate_loop_animation(self.target_folder)
-        self.hint_label.text = "P1 & P2: both walk into the gate to go through!"
+        if self.walk_in_required:
+            self.hint_label.text = "P1 & P2: both walk into the gate to go through!"
+        elif self.on_unlock:
+            self.on_unlock()
 
     def try_enter(self, player, x, y):
-        # called every frame per player by the owning state. only matters
-        # once the gate's actually unlocked - walking through a dark gate
-        # does nothing. returns True the instant this particular player's
-        # entry registers, so the caller knows to hide that player's sprite
-        if not self.locked or player in self._entered or not self.contains(x, y):
+        if not self.walk_in_required or not self.locked or player in self._entered:
+            return False
+
+        overlaps = (
+            x < self.x + self.size and x + config.TILE_SIZE > self.x
+            and y < self.y + self.size and y + config.TILE_SIZE > self.y
+        )
+        if not overlaps:
             return False
 
         self._entered.add(player)
