@@ -7,6 +7,7 @@ from world.tilemap import TileMap
 from world.hud import ShieldHud, GunHud, HeartsDisplay, PitchLegend
 from world.interactable import Interactable
 from world.gate import Gate
+from world.gem import Gem
 from entities.shield import Shield
 from entities.gun import Gun
 from entities.player_singer import Player1
@@ -77,7 +78,7 @@ class DungeonState:
         self.phase = "puzzle"  # puzzle -> combat -> cleared
 
         self.hint_label = pyglet.text.Label(
-            "P2: click/pinch the crystal to wake it | P1: sing it open to start the fight",
+            "P2: click/pinch the gem to wake it | P1: sing it its color to start the fight",
             x=20, y=config.WIN_HEIGHT - 30,
             anchor_x="left", anchor_y="center",
             font_size=14, color=config.TEXT_COLOR,
@@ -85,12 +86,19 @@ class DungeonState:
         )
 
         self.keys = key.KeyStateHandler()
-        self._spawn_gate(self._start_combat)
+
+        # the fight starter isn't a door - no target_slot means coloring it
+        # alone is the whole trigger, on_solved fires the instant it locks
+        self.gem = Gem(
+            config.WIN_WIDTH - 110, config.WIN_HEIGHT // 2, 64,
+            self.batch, self.entity_group, on_solved=self._start_combat,
+            stats=self.manager.stats,
+        )
 
     def _spawn_gate(self, on_unlock, melody=False):
-        # same crystal mechanic for both "start the fight" and "leave the
-        # room" - the exit gate is idea.md's "final gate" though, so it
-        # gets a sung melody (see world/gate.py) instead of one held pitch
+        # the exit gate only - idea.md's "final gate", so it gets a sung
+        # melody (see world/gate.py) instead of one held pitch, and (the
+        # default) walk_in_required=True since it's an actual door out
         self.gate = Gate(
             config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 40, 80,
             self.batch, self.entity_group, on_unlock=on_unlock,
@@ -100,12 +108,6 @@ class DungeonState:
     def _start_combat(self):
         self.phase = "combat"
         self.gate = None
-        # both players just walked through the entry gate and disappeared
-        # doing it same DungeonState keeps using them for the fight, so
-        # bring them back unlike the overworld/treasure transitions this
-        # doesn't rebuild fresh Player1/Player2 objects
-        self.player1.rect.visible = True
-        self.player2.rect.visible = True
         count = random.randint(config.ENEMY_COUNT_MIN, config.ENEMY_COUNT_MAX)
         for _ in range(count):
             x = random.uniform(100, config.WIN_WIDTH - 150)
@@ -138,14 +140,27 @@ class DungeonState:
         self.player1.update(dt, self.keys)
         self.player2.update(dt, self.keys)
 
-        if self.gate is not None:
-            self.gate.update(dt)
+        self.gem.update(dt)
+        near = (
+            self.gem.in_range(self.player1.x, self.player1.y)
+            or self.gem.in_range(self.player2.x, self.player2.y)
+        )
+        self.gem.show_hint(near)
+
+        gate = self.gate
+        if gate is not None:
+            gate.update(dt)
             # gate unlocked color alone doesnt open it anymore, both P1
             # and P2 have to physically walk in, whoever first just
-            # disappears until the other catches up (see Gate.try_enter)
-            if self.gate.try_enter(self.player1, self.player1.x, self.player1.y):
+            # disappears until the other catches up (see Gate.try_enter).
+            # cache the gate in a local first - try_enter can fire
+            # on_unlock the instant the second player registers, and that
+            # callback (_start_combat) sets self.gate = None, so re-reading
+            # self.gate for the second call would crash once a pair
+            # completes on the same frame
+            if gate.try_enter(self.player1, self.player1.x, self.player1.y):
                 self.player1.rect.visible = False
-            if self.gate.try_enter(self.player2, self.player2.x, self.player2.y):
+            if gate.try_enter(self.player2, self.player2.x, self.player2.y):
                 self.player2.rect.visible = False
 
         if self.phase == "combat":
@@ -237,6 +252,8 @@ class DungeonState:
         if self.shield_hud.on_mouse_press(x, y, button, modifiers):
             return
         if self.gun_hud.on_mouse_press(x, y, button, modifiers):
+            return
+        if self.gem.on_mouse_press(x, y):
             return
         if self.gate is not None and self.gate.on_mouse_press(x, y):
             return
