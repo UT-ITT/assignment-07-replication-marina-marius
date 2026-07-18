@@ -22,13 +22,13 @@ NORMAL_TINT = (255, 255, 255)
 
 class Player2(GridActor):
 
-    def __init__(self, x, y, batch, group):
-        super().__init__(x, y, "assets/player2", batch, group)
+    def __init__(self, x, y, batch, group, collision_scale=None):
+        super().__init__(x, y, "assets/player2", batch, group, collision_scale=collision_scale)
 
-    def update(self, dt, keys):
+    def update(self, dt, keys, is_walkable=None):
         dy = self.axis_from_keys(keys, key.DOWN, key.UP)
         dx = 0 if dy != 0 else self.axis_from_keys(keys, key.LEFT, key.RIGHT)
-        self.step_towards(dt, dx, dy)
+        self.step_towards(dt, dx, dy, is_walkable)
 
         # no camera preview window open? no problem, sprite just glows while pinching
         self.color = PINCH_GLOW_TINT if gesture_tracking.is_pinching else NORMAL_TINT

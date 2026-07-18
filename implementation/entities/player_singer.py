@@ -27,15 +27,15 @@ def pitch_to_color(pitch):
 
 class Player1(GridActor):
 
-    def __init__(self, x, y, batch, group, shield=None):
-        super().__init__(x, y, "assets/player1", batch, group)
+    def __init__(self, x, y, batch, group, shield=None, collision_scale=None):
+        super().__init__(x, y, "assets/player1", batch, group, collision_scale=collision_scale)
         # not every screen has a shield (looking at you, overworld), so this can stay None
         self.shield = shield
 
-    def update(self, dt, keys):
+    def update(self, dt, keys, is_walkable=None):
         dy = self.axis_from_keys(keys, key.S, key.W)
         dx = 0 if dy != 0 else self.axis_from_keys(keys, key.A, key.D)
-        self.step_towards(dt, dx, dy)
+        self.step_towards(dt, dx, dy, is_walkable)
 
     def handle_key_press(self, symbol, interactables=()):
         if symbol == key.F and self.shield is not None:

@@ -6,6 +6,7 @@ from entities.player_gesture import Player2
 from world.gate import Gate
 from world.gem import Gem
 from world.hud import PitchLegend
+from world.tilemap import TileMap
 
 # Screen 1: World
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -21,28 +22,30 @@ class OverworldState:
         self.entity_group = pyglet.graphics.Group(order=1)
         self.ui_group = pyglet.graphics.Group(order=2)
 
-        # TODO: replace with tilemap.py rendering of the overworld layout
-        self.background = pyglet.shapes.Rectangle(
-            0, 0, config.WIN_WIDTH, config.WIN_HEIGHT,
-            color=(40, 60, 40), batch=self.batch, group=self.bg_group,
+        self.tilemap = TileMap(
+            "assets/chamber/overworld.tmx", self.batch, self.bg_group
         )
+        self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
-        # overworld has no shield (that's a dungeon thing), so F is just a shrug here
-        self.player1 = Player1(200, 200, self.batch, self.entity_group)
-        self.player2 = Player2(260, 200, self.batch, self.entity_group)
+        self.player1 = Player1(
+            200, 232, self.batch, self.entity_group, collision_scale=self.tilemap.scale
+        )
+        self.player2 = Player2(
+            264, 232, self.batch, self.entity_group, collision_scale=self.tilemap.scale
+        )
 
         # mechanic B: 4 gems, one per color P1 sings each one its color,
         # P2 drags it onto its matching marked slot near the gate. all 4
         # solved before the gate can even be clicked, see on_mouse_press
         gem_colors = config.SHIELD_COLORS
         gem_slot_positions = [
-            (config.WIN_WIDTH - 280, 180),
-            (config.WIN_WIDTH - 280, 320),
-            (config.WIN_WIDTH - 280, 460),
-            (config.WIN_WIDTH - 280, 600),
+            (1000, 236),
+            (1080, 336),
+            (896, 356),
+            (736, 360),
         ]
         gem_spawn_positions = [
-            (200, 500), (400, 500), (600, 500), (800, 500),
+            (200, 436), (400, 380), (600, 356), (792, 356),
         ]
         self.gems = [
             Gem(
@@ -58,7 +61,7 @@ class OverworldState:
         # mechanic A: P1 sings its color to unlock it, then both walk in
         # but it can't even be woken up until all 4 gems are in place
         self.gate = Gate(
-            config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 50, 80,
+            842, 230, 80,
             self.batch, self.entity_group, on_unlock=self._enter_dungeon,
             stats=self.manager.stats,
         )
@@ -94,8 +97,8 @@ class OverworldState:
         self.manager.set_state("dungeon")
 
     def on_update(self, dt):
-        self.player1.update(dt, self.keys)
-        self.player2.update(dt, self.keys)
+        self.player1.update(dt, self.keys, self.tilemap.is_walkable)
+        self.player2.update(dt, self.keys, self.tilemap.is_walkable)
         self.gate.update(dt)
 
         for gem in self.gems:
