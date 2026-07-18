@@ -4,8 +4,8 @@ import config
 from entities.player_singer import Player1
 from entities.player_gesture import Player2
 from world.gate import Gate
+from world.gem import Gem
 from world.hud import PitchLegend
-from world.interactable import Pushable
 
 # Screen 1: World
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -31,20 +31,37 @@ class OverworldState:
         self.player1 = Player1(200, 200, self.batch, self.entity_group)
         self.player2 = Player2(260, 200, self.batch, self.entity_group)
 
-        # mechanic B: P2 grabs it and drags it around, no strings attached
-        self.crystal = Pushable(
-            200, config.WIN_HEIGHT - 200, 40, self.batch, self.entity_group,
-        )
+        # mechanic B: 4 gems, one per color P1 sings each one its color,
+        # P2 drags it onto its matching marked slot near the gate. all 4
+        # solved before the gate can even be clicked, see on_mouse_press
+        gem_colors = config.SHIELD_COLORS
+        gem_slot_positions = [
+            (config.WIN_WIDTH - 280, 180),
+            (config.WIN_WIDTH - 280, 320),
+            (config.WIN_WIDTH - 280, 460),
+            (config.WIN_WIDTH - 280, 600),
+        ]
+        gem_spawn_positions = [
+            (200, 500), (400, 500), (600, 500), (800, 500),
+        ]
+        self.gems = [
+            Gem(
+                gem_spawn_positions[i][0], gem_spawn_positions[i][1], 50,
+                self.batch, self.entity_group,
+                target_color=gem_colors[i], target_slot=gem_slot_positions[i],
+                stats=self.manager.stats,
+            )
+            for i in range(4)
+        ]
+        self._gems_done_notified = False
 
-        # mechanic A: P2 wakes it up, P1 sings its color to unlock it and
-        # unlocking it *is* opening it, straight into the dungeon
+        # mechanic A: P1 sings its color to unlock it, then both walk in
+        # but it can't even be woken up until all 4 gems are in place
         self.gate = Gate(
             config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 50, 80,
             self.batch, self.entity_group, on_unlock=self._enter_dungeon,
             stats=self.manager.stats,
         )
-
-        self.interactables = (self.crystal, self.gate)
 
         # cheat sheet so P1 knows roughly what to sing instead of guessing
         self.pitch_legend = PitchLegend(
@@ -53,8 +70,8 @@ class OverworldState:
         )
 
         self.hint_label = pyglet.text.Label(
-            "P1 (WASD): sings to unlock the gate | "
-            "P2 (Arrows + click/pinch): drags the crystal, wakes the gate up",
+            "P1: sing each gem its color | P2: drag it onto its matching slot - "
+            "solve all 4 to wake the gate",
             x=20,
             y=config.WIN_HEIGHT - 30,
             anchor_x="left",
@@ -81,12 +98,24 @@ class OverworldState:
         self.player2.update(dt, self.keys)
         self.gate.update(dt)
 
-        for interactable in self.interactables:
+        for gem in self.gems:
+            gem.update(dt)
             near = (
-                interactable.in_range(self.player1.x, self.player1.y)
-                or interactable.in_range(self.player2.x, self.player2.y)
+                gem.in_range(self.player1.x, self.player1.y)
+                or gem.in_range(self.player2.x, self.player2.y)
             )
-            interactable.show_hint(near)
+            gem.show_hint(near)
+
+        gems_done = all(gem.solved for gem in self.gems)
+        if gems_done and not self._gems_done_notified:
+            self._gems_done_notified = True
+            self.hint_label.text = "P2: click/pinch the gate to wake it | P1: sing its color to unlock it"
+
+        gate_near = (
+            self.gate.in_range(self.player1.x, self.player1.y)
+            or self.gate.in_range(self.player2.x, self.player2.y)
+        )
+        self.gate.show_hint(gems_done and gate_near)
 
         # gate unlocked color alone doesn't open it anymore, both P1 and
         # P2 have to physically walk in, whoevers first just disappears
@@ -103,12 +132,19 @@ class OverworldState:
         self.player1.handle_key_press(symbol)
 
     def on_mouse_press(self, x, y, button, modifiers):
-        if self.gate.on_mouse_press(x, y):
+        print(f"[pyglet] on_mouse_press at ({x}, {y})")
+        for gem in self.gems:
+            if gem.on_mouse_press(x, y):
+                return
+        if all(gem.solved for gem in self.gems) and self.gate.on_mouse_press(x, y):
             return
-        self.crystal.on_mouse_press(x, y)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        self.crystal.on_mouse_drag(dx, dy)
+        print(f"[pyglet] on_mouse_drag at ({x}, {y}) delta=({dx}, {dy})")
+        for gem in self.gems:
+            gem.on_mouse_drag(dx, dy)
 
     def on_mouse_release(self, x, y, button, modifiers):
-        self.crystal.on_mouse_release()
+        print(f"[pyglet] on_mouse_release at ({x}, {y})")
+        for gem in self.gems:
+            gem.on_mouse_release()
