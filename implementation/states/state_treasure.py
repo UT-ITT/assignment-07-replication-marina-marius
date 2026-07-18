@@ -117,7 +117,7 @@ class TreasureState:
         self.gem = Gem(
             self.skull_chest.sprite.x, self.skull_chest.sprite.y, 50,
             self.batch, self.entity_group,
-            on_locked=self._gem_locked, stats=self.manager.stats,
+            on_solved=self._gem_locked, stats=self.manager.stats,
         )
         self.hint_label.text = "P2: click the gem to wake it | P1: sing its color and hold it"
 
@@ -144,6 +144,11 @@ class TreasureState:
                 self._spawn_skull()
         elif self.phase == "gem":
             self.gem.update(dt)
+            near = (
+                self.gem.in_range(self.player1.x, self.player1.y)
+                or self.gem.in_range(self.player2.x, self.player2.y)
+            )
+            self.gem.show_hint(near)
         elif self.phase == "reveal":
             self.reveal_timer -= dt
             if self.reveal_timer <= 0:
