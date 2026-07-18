@@ -29,7 +29,7 @@ class DungeonState:
         self.ui_group = pyglet.graphics.Group(order=2)
 
         self.tilemap = TileMap(
-            "assets/dungeon/Dungeon1.tmx", self.batch, self.bg_group
+            "assets/chamber/dungeon.tmx", self.batch, self.bg_group
         )
         self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
@@ -41,29 +41,33 @@ class DungeonState:
         self.gun_hud = GunHud(self.gun, self.batch, self.ui_group, x=20, y=30)
 
         self.player1 = Player1(
-            200, 120, self.batch, self.entity_group, shield=self.shield
+            200, 120, self.batch, self.entity_group, shield=self.shield,
+            collision_scale=self.tilemap.scale,
         )
         self.player2 = Player2(
-            260, 120, self.batch, self.entity_group
+            260, 120, self.batch, self.entity_group, collision_scale=self.tilemap.scale
         )
 
         self.hearts1 = HeartsDisplay(20, config.WIN_HEIGHT - 60, self.batch, self.ui_group)
         self.hearts2 = HeartsDisplay(20, config.WIN_HEIGHT - 90, self.batch, self.ui_group)
 
-        # a lever that does nothing except prove E and pinch-click both work
+        # a lever that does nothing except prove E and pinch-click both work.
+        # nudged onto walkable ground once dungeon.tmx's "blocks" layers
+        # landed - the round-number placeholder used to sit inside a wall
         self.lever = Interactable(
-            140, config.WIN_HEIGHT - 200, 40, self.batch, self.entity_group,
+            212, 448, 40, self.batch, self.entity_group,
         )
 
-        # a couple of static blocks bullets can crash into instead of reaching their target
-        obstacle_y_positions = (240, 440)
+        # a couple of static blocks bullets can crash into instead of
+        # reaching their target - also nudged off the walls onto the open
+        # floor, same reason as the lever above
+        obstacle_positions = [(620, 136), (596, 440)]
         self.obstacles = [
             pyglet.shapes.Rectangle(
-                config.WIN_WIDTH // 2 - config.OBSTACLE_SIZE // 2, y,
-                config.OBSTACLE_SIZE, config.OBSTACLE_SIZE,
+                x, y, config.OBSTACLE_SIZE, config.OBSTACLE_SIZE,
                 color=(90, 80, 70), batch=self.batch, group=self.entity_group,
             )
-            for y in obstacle_y_positions
+            for x, y in obstacle_positions
         ]
 
         # cheat sheet so P1 knows roughly what to sing instead of guessing
@@ -137,8 +141,8 @@ class DungeonState:
         self.shield_hud.sync_with_shield()
         self.gun.update(dt)
         self.gun_hud.sync_with_gun()
-        self.player1.update(dt, self.keys)
-        self.player2.update(dt, self.keys)
+        self.player1.update(dt, self.keys, self.tilemap.is_walkable)
+        self.player2.update(dt, self.keys, self.tilemap.is_walkable)
 
         self.gem.update(dt)
         near = (

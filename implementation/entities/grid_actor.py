@@ -14,6 +14,12 @@ from entities.sprite_anim import load_image
 
 WALK_FRAME_DURATION = 0.15
 
+# the sprites render at half the movement tile's size, centered on it - full
+# size made both players look oversized/blocky next to the tilemap's much
+# finer 16px art. movement/collision/interactable-radius math is untouched,
+# this only shrinks and re-centers what actually gets drawn
+PLAYER_RENDER_SCALE = 0.5
+
 # dx, dy (as step_towards already receives them) -> sprite folder direction name
 DIRECTION_NAMES = {
     (0, -1): "down",
@@ -80,14 +86,17 @@ class GridActor:
             self.collision_width = self.native_width * collision_scale
             self.collision_height = self.native_height * collision_scale
 
+        # rendered smaller than the movement tile (see PLAYER_RENDER_SCALE)
+        # and centered within it, so the offset gets reused every step
+        render_size = size * PLAYER_RENDER_SCALE
+        self._render_offset = (size - render_size) / 2
+
         self.sprite = pyglet.sprite.Sprite(
-            idle_image, x=x, y=y, batch=batch, group=group,
+            idle_image, x=x + self._render_offset, y=y + self._render_offset,
+            batch=batch, group=group,
         )
-        # native art is small pixel-art (16x20) - stretch to fill the tile's
-        # visual footprint exactly, same as the old plain-color rectangle had
-        # (collision uses collision_width/height above instead, not this)
-        self.sprite.width = size
-        self.sprite.height = size
+        self.sprite.width = render_size
+        self.sprite.height = render_size
 
     @property
     def color(self):
@@ -124,9 +133,8 @@ class GridActor:
 
         new_x = min(max(self.x + dx * self.size, 0), config.WIN_WIDTH - self.size)
         new_y = min(max(self.y + dy * self.size, 0), config.WIN_HEIGHT - self.size)
-        # only screens with a walkable tilemap (currently just the overworld)
-        # pass is_walkable - leaving it None elsewhere keeps the dungeon/
-        # treasure chamber exactly as free-roaming as they've always been.
+        # only screens with a walkable tilemap pass is_walkable - leaving it
+        # None elsewhere (nothing currently does) keeps things free-roaming.
         # deliberately not resetting _step_timer on a blocked attempt: it's
         # already <=0 here, so bumping a wall re-checks every frame instead
         # of eating a wasted cooldown once the way actually clears
@@ -138,8 +146,8 @@ class GridActor:
                 return
 
         self.x, self.y = new_x, new_y
-        self.sprite.x = self.x
-        self.sprite.y = self.y
+        self.sprite.x = self.x + self._render_offset
+        self.sprite.y = self.y + self._render_offset
         self._step_timer = self.STEP_INTERVAL
 
     def _set_animation(self, moving):

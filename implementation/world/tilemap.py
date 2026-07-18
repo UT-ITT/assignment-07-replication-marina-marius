@@ -25,11 +25,17 @@ class TileMap:
         self._native_positions = []
 
         # (tiled_x, tiled_y) Tiled's own row-from-top tile coords, same ones
-        # layer.tiles() already hands us - for every tile sitting on a layer
-        # whose custom "blocks" property (set per-layer in Tiled, not per
-        # tile way less tedious to tag by hand than every individual tile
-        # graphic) is checked true
+        # layer.iter_data() already hands us - for every tile sitting on a
+        # layer whose custom "blocks" property (set per-layer in Tiled, not
+        # per tile way less tedious to tag by hand than every individual
+        # tile graphic) is checked true
         self._blocked_tiles = set()
+
+        # gid -> pyglet.image.Animation, built the first time that gid is
+        # seen and shared by every other placed tile using it - a map can
+        # easily place the same animated water/fire/trap tile hundreds of
+        # times, one Animation object per gid beats one per placement
+        self._animation_cache = {}
 
         for layer in self.data.visible_layers:
             if not hasattr(layer, "tiles"):
@@ -37,13 +43,9 @@ class TileMap:
 
             blocks = bool(getattr(layer, "properties", {}).get("blocks"))
 
-            for x, y, image in layer.tiles():
-                # TODO: animated tiles (water/fire/traps/doors etc.) aren't
-                # handled yet! this only grabs each gid static first frame
-                # Dungeon1.tmx alone has 425 <animation> tile defs, so this
-                # will need reading the frame list per gid and driving it
-                # with pyglet.clock instead of a single static Sprite image
-                # unity could do that better *sigh*
+            for x, y, gid in layer.iter_data():
+                if not gid:
+                    continue  # empty cell, nothing placed here on this layer
 
                 if blocks:
                     self._blocked_tiles.add((x, y))
@@ -53,7 +55,7 @@ class TileMap:
                 px = x * self.tile_width
                 py = (self.height_tiles - 1 - y) * self.tile_height
                 sprite = pyglet.sprite.Sprite(
-                    image, x=px, y=py, batch=batch, group=group
+                    self._image_for_gid(gid), x=px, y=py, batch=batch, group=group
                 )
                 self.sprites.append(sprite)
                 self._native_positions.append((px, py))
@@ -68,6 +70,32 @@ class TileMap:
         self.scale = 1.0
         self._offset_x = 0.0
         self._offset_y = 0.0
+
+    def _image_for_gid(self, gid):
+        # most gids are a plain static tile - pytmx already resolved and
+        # cached those images itself (self.data.images), nothing to build.
+        # a gid with a Tiled "Tile Animation Editor" sequence attached
+        # instead carries a "frames" property: a list of (gid, duration_ms)
+        # pointing at other tiles in the same tileset to cycle through -
+        # turn that into a real looping pyglet.image.Animation, once per gid
+        if gid in self._animation_cache:
+            return self._animation_cache[gid]
+
+        properties = self.data.get_tile_properties_by_gid(gid)
+        frames = properties.get("frames") if properties else None
+        if not frames:
+            return self.data.images[gid]
+
+        # Tiled stores frame duration in milliseconds, pyglet wants seconds.
+        # leaving every frame's duration a real number (never None) is what
+        # makes a pyglet Animation loop forever instead of stopping on the
+        # last frame - exactly what a background water/fire/trap tile wants
+        animation = pyglet.image.Animation([
+            pyglet.image.AnimationFrame(self.data.images[frame.gid], frame.duration / 1000)
+            for frame in frames
+        ])
+        self._animation_cache[gid] = animation
+        return animation
 
     def fit_to(self, target_width, target_height, center=True):
 

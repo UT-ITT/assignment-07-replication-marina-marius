@@ -73,3 +73,5 @@ controller + keyboard: https://vryell.itch.io/controller-keyboard-icons
 
 Our best friend for sprite cutting:
 - https://ezgif.com/sprite-cutter?err=expired
+
+- bat: https://purplecatgamestudio.itch.io/bootiful-beasts?download

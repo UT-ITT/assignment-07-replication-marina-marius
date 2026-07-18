@@ -59,9 +59,11 @@ class OverworldState:
         self._gems_done_notified = False
 
         # mechanic A: P1 sings its color to unlock it, then both walk in
-        # but it can't even be woken up until all 4 gems are in place
+        # but it can't even be woken up until all 4 gems are in place.
+        # 1.5x the original 80px size, recentered on the same spot so it
+        # grows in place instead of shifting toward one corner
         self.gate = Gate(
-            842, 230, 80,
+            822, 210, 120,
             self.batch, self.entity_group, on_unlock=self._enter_dungeon,
             stats=self.manager.stats,
         )
