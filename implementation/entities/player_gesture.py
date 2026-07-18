@@ -7,28 +7,31 @@
 # like its a totally normal click, coordinates just work out that way
 from pyglet.window import key
 
-import config
 from entities.grid_actor import GridActor
 from entities.projectile import Projectile
 from input import gesture_tracking
+
+# a sprite can only ever get darker/recolored via a multiply-tint, never
+# literally brighter than its own art (unlike the old flat-fill rectangle,
+# which could just become P2_COLOR-but-brighter) dropping the blue channel
+# is the closest "glow" analog: still reads as a highlight, without washing
+# the character out to solid white
+PINCH_GLOW_TINT = (255, 255, 140)
+NORMAL_TINT = (255, 255, 255)
 
 
 class Player2(GridActor):
 
     def __init__(self, x, y, batch, group):
-        super().__init__(x, y, config.P2_COLOR[:3], batch, group)
+        super().__init__(x, y, "assets/player2", batch, group)
 
     def update(self, dt, keys):
         dy = self.axis_from_keys(keys, key.DOWN, key.UP)
         dx = 0 if dy != 0 else self.axis_from_keys(keys, key.LEFT, key.RIGHT)
         self.step_towards(dt, dx, dy)
 
-        # no camera preview window open? no problem, rectangle just glows while pinching
-        base = config.P2_COLOR[:3]
-        if gesture_tracking.is_pinching:
-            self.color = tuple(min(255, channel + 60) for channel in base)
-        else:
-            self.color = base
+        # no camera preview window open? no problem, sprite just glows while pinching
+        self.color = PINCH_GLOW_TINT if gesture_tracking.is_pinching else NORMAL_TINT
 
     def try_interact_at(self, x, y, interactables, radius=64):
         # comes from the state's on_mouse_press with the real click/pinch spot,

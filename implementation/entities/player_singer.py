@@ -28,16 +28,13 @@ def pitch_to_color(pitch):
 class Player1(GridActor):
 
     def __init__(self, x, y, batch, group, shield=None):
-        super().__init__(x, y, config.P1_COLOR[:3], batch, group)
+        super().__init__(x, y, "assets/player1", batch, group)
         # not every screen has a shield (looking at you, overworld), so this can stay None
         self.shield = shield
-        self.facing = (0, -1)  # facing down until P1 first moves, same as most top-down games
 
     def update(self, dt, keys):
         dy = self.axis_from_keys(keys, key.S, key.W)
         dx = 0 if dy != 0 else self.axis_from_keys(keys, key.A, key.D)
-        if dx or dy:
-            self.facing = (dx, dy)
         self.step_towards(dt, dx, dy)
 
     def handle_key_press(self, symbol, interactables=()):

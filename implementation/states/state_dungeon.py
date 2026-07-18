@@ -159,9 +159,9 @@ class DungeonState:
             # self.gate for the second call would crash once a pair
             # completes on the same frame
             if gate.try_enter(self.player1, self.player1.x, self.player1.y):
-                self.player1.rect.visible = False
+                self.player1.sprite.visible = False
             if gate.try_enter(self.player2, self.player2.x, self.player2.y):
-                self.player2.rect.visible = False
+                self.player2.sprite.visible = False
 
         if self.phase == "combat":
             self._update_combat(dt)
