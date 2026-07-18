@@ -8,7 +8,7 @@ import mediapipe as mp
 import threading
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from ctypes import Structure, c_double, c_uint32, c_void_p, cdll
+from ctypes import Structure, c_double, c_int64, c_uint32, c_void_p, cdll
 
 
 class Button:
@@ -24,10 +24,16 @@ if sys.platform == "darwin":
     _core_graphics.CGEventCreateMouseEvent.restype = c_void_p
     _core_graphics.CGEventCreateMouseEvent.argtypes = [c_void_p, c_uint32, CGPoint, c_uint32]
     _core_graphics.CGEventPost.argtypes = [c_uint32, c_void_p]
+    _core_graphics.CGEventSetIntegerValueField.argtypes = [c_void_p, c_uint32, c_int64]
+
+    # CGEventField values for the mouse-move delta fields (CGEventTypes.h)
+    _K_CG_MOUSE_EVENT_DELTA_X = 4
+    _K_CG_MOUSE_EVENT_DELTA_Y = 5
 
     class Controller:
         def __init__(self):
             self._position = (0, 0)
+            self._button_down = False
 
         @property
         def position(self):
@@ -36,19 +42,26 @@ if sys.platform == "darwin":
         @position.setter
         def position(self, value):
             x, y = int(value[0]), int(value[1])
+            old_x, old_y = self._position
+            delta_x, delta_y = x - old_x, y - old_y
             self._position = (x, y)
             point = CGPoint(x, y)
-            event = _core_graphics.CGEventCreateMouseEvent(0, 5, point, 0)
+            event_type = 6 if self._button_down else 5
+            event = _core_graphics.CGEventCreateMouseEvent(0, event_type, point, 0)
+            _core_graphics.CGEventSetIntegerValueField(event, _K_CG_MOUSE_EVENT_DELTA_X, delta_x)
+            _core_graphics.CGEventSetIntegerValueField(event, _K_CG_MOUSE_EVENT_DELTA_Y, delta_y)
             _core_graphics.CGEventPost(0, event)
 
         def press(self, button):
             if button == Button.left:
+                self._button_down = True
                 x, y = self._position
                 event = _core_graphics.CGEventCreateMouseEvent(0, 1, CGPoint(x, y), 0)
                 _core_graphics.CGEventPost(0, event)
 
         def release(self, button):
             if button == Button.left:
+                self._button_down = False
                 x, y = self._position
                 event = _core_graphics.CGEventCreateMouseEvent(0, 2, CGPoint(x, y), 0)
                 _core_graphics.CGEventPost(0, event)
@@ -77,16 +90,6 @@ cursor_y = 0
 is_pinching = False
 is_tracking = False
 
-# a synthetic click only actually reaches on_mouse_press if the game window
-# is already key/frontmost - Cocoa treats the first click on a background
-# window as "just focus it" and swallows the click itself (pyglet doesn't
-# opt out of that default via acceptsFirstMouse:), so a pinch happening
-# while some other window (e.g. the hand-tracking preview) is focused
-# looks like it did nothing everywhere except P2's own pinch-glow, which
-# reads straight off is_pinching and needs no window event at all. this
-# thread can't safely call AppKit itself (window activation has to happen
-# on the main thread), so it just raises a flag here for main.py's
-# already-main-thread update() to actually call window.activate() on
 activation_requested = False
 
 # hand connections for drawing
@@ -175,9 +178,11 @@ def click_via_landmark(pinching, mouse, is_left_pressed):
     if pinching and not is_left_pressed:
         mouse.press(Button.left)
         is_left_pressed = True
+        print(f"[pinch] DOWN at {mouse.position}")
     elif not pinching and is_left_pressed:
         mouse.release(Button.left)
         is_left_pressed = False
+        print(f"[pinch] UP at {mouse.position}")
 
     return is_left_pressed
 
@@ -203,13 +208,6 @@ def open_camera(video_id):
     return cv2.VideoCapture(video_id)
 
 def select_camera():
-    # used to scan cams 0-2 (opening + releasing each one) and then open the
-    # chosen one AGAIN just to confirm it works, before hand_loop() opens it
-    # a third time for real, opencv has no cheap "does this index exist"
-    # query, so that was 3+ real AVFoundation session opens back to back,
-    # which is exactly what made the webcam refuse to start at all sometimes
-    # (see bugs.md). now we just ask, and let hand_loop() single open_camera()
-    # call be the only time the camera hardware actually gets touched
     selection = input("select webcam id [0] ").strip()
     if not selection:
         return 0
@@ -267,24 +265,12 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
         if results.hand_landmarks:
             hand_landmarks = results.hand_landmarks[0]
 
-            # keep requesting activation every tracked frame, not just the
-            # instant a pinch fires - the actual mouse-down CGEvent goes out
-            # immediately from this thread, main.py's update() only gets to
-            # act on the flag on its next tick, so waiting until press time
-            # to ask for activation is already one frame too late for that
-            # click. asking continuously means the window is already key by
-            # the time a real pinch happens instead of chasing it after
             global activation_requested
             activation_requested = True
 
             if show_video:
                 draw_landmarks(frame, hand_landmarks)
 
-            # update cursor position (window-relative, for anything that wants to read it)
-            # smoothed against the *previous* frame's landmark first - the raw
-            # per-frame landmark alone is jittery enough to make the cursor
-            # visibly shake even holding the hand still, which made a "click
-            # and hold" drag wobble instead of tracking cleanly
             pointer_landmark = choose_pointer_landmark(hand_landmarks)
             if smoothed_x is None:
                 smoothed_x, smoothed_y = pointer_landmark.x, pointer_landmark.y
@@ -295,10 +281,6 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
             cursor_x = cx
             cursor_y = cy
 
-            # the real OS cursor needs *global* desktop coordinates though,
-            # so the window on-screen position gets added back in here
-            # otherwise clicks land wherever (0, 0) happens to be instead of
-            # actually on the game window (see bugs.md, this one was a doozy)
             current_point = (origin_x + cx, origin_y + cy)
             if previous_point is None:
                 mouse.position = current_point
@@ -314,19 +296,14 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
 
                 previous_point = current_point
             
-            # update pinch state - computed once with hysteresis (see
-            # check_pinch) and shared by both the visual flag and the actual
-            # click, so they can't disagree with each other frame to frame
             is_pinching = check_pinch(hand_landmarks, is_pinching)
             is_left_pressed = click_via_landmark(is_pinching, mouse, is_left_pressed)
         else:
-            # reset pinch and cursor smoothing when no hands detected, a
-            # stale smoothed position would otherwise make the cursor drag
-            # itself back on screen the moment the hand reappears
             is_pinching = False
             smoothed_x = None
             smoothed_y = None
             if is_left_pressed:
+                print("[pinch] hand lost mid-hold -> forcing UP (this drops a drag!)")
                 mouse.release(Button.left)
                 is_left_pressed = False
             previous_point = None
