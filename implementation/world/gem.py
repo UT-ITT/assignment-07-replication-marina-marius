@@ -22,7 +22,11 @@ SLOT_TOLERANCE = 24
 
 def _gem_loop_animation(folder):
     return load_animation(
-        f"assets/gem/{folder}", GEM_LOOP_FRAMES, GEM_FRAME_DURATION, loop=True, name_prefix="tile"
+        f"assets/gem/{folder}",
+        GEM_LOOP_FRAMES,
+        GEM_FRAME_DURATION,
+        loop=True,
+        name_prefix="tile",
     )
 
 
@@ -34,16 +38,28 @@ class Gem(Interactable):
     # target_slot was given] draggable -> solved (dragged onto its slot).
     # no target_slot means colored already *is* solved - on_solved fires
     # the instant the color locks, nothing left to drag anywhere
-    def __init__(self, x, y, size, batch, group, on_solved=None, target_color=None,
-                 target_slot=None, stats=None,
-                 hint="P2: click/pinch to wake it up, then P1: sing its color"):
+    def __init__(
+        self,
+        x,
+        y,
+        size,
+        batch,
+        group,
+        on_solved=None,
+        target_color=None,
+        target_slot=None,
+        stats=None,
+        hint="P2: click/pinch to wake it up, then P1: sing its color",
+    ):
 
         self.x = x
         self.y = y
         self.size = size
         self.target_color = target_color or random.choice(config.SHIELD_COLORS)
         self.target_folder = color_folder(self.target_color)
-        self.color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(self.target_color)]
+        self.color_name = config.SHIELD_COLOR_NAMES[
+            config.SHIELD_COLORS.index(self.target_color)
+        ]
         self.target_slot = target_slot
         self.on_solved = on_solved
         self.stats = stats
@@ -56,15 +72,25 @@ class Gem(Interactable):
         self._folder = "basic"
 
         self.sprite = pyglet.sprite.Sprite(
-            _gem_loop_animation("basic"), x=x, y=y, batch=batch, group=group,
+            _gem_loop_animation("basic"),
+            x=x,
+            y=y,
+            batch=batch,
+            group=group,
         )
         self.sprite.scale = size / GEM_SPRITE_PIXELS
 
         self.hint_label = pyglet.text.Label(
-            hint, x=x, y=y + size / 2 + 10,
-            anchor_x="center", anchor_y="bottom",
-            font_name=config.FONT_NAME, font_size=11, color=(255, 255, 255, 255),
-            batch=batch, group=group,
+            hint,
+            x=x,
+            y=y + size / 2 + 10,
+            anchor_x="center",
+            anchor_y="bottom",
+            font_name=config.FONT_NAME,
+            font_size=11,
+            color=(255, 255, 255, 255),
+            batch=batch,
+            group=group,
         )
         self.hint_label.visible = False
 
@@ -72,13 +98,21 @@ class Gem(Interactable):
         if target_slot is not None:
             # a Box outline showing where this gem actually belongs
             self.slot_marker = pyglet.shapes.Box(
-                target_slot[0] - size / 2, target_slot[1] - size / 2, size, size,
-                thickness=3, color=self.target_color[:3], batch=batch, group=group,
+                target_slot[0] - size / 2,
+                target_slot[1] - size / 2,
+                size,
+                size,
+                thickness=3,
+                color=self.target_color[:3],
+                batch=batch,
+                group=group,
             )
 
     def contains(self, x, y):
         half = self.size / 2
-        return self.x - half <= x <= self.x + half and self.y - half <= y <= self.y + half
+        return (
+            self.x - half <= x <= self.x + half and self.y - half <= y <= self.y + half
+        )
 
     def on_mouse_press(self, x, y):
         if self.solved or not self.contains(x, y):
@@ -89,7 +123,9 @@ class Gem(Interactable):
             print(f"[gem {self.color_name}] press -> now listening")
         elif self.target_slot is not None:
             self.grabbed = True
-            print(f"[gem {self.color_name}] press -> GRABBED at ({self.x:.0f}, {self.y:.0f})")
+            print(
+                f"[gem {self.color_name}] press -> GRABBED at ({self.x:.0f}, {self.y:.0f})"
+            )
         return True
 
     def on_mouse_drag(self, dx, dy):
@@ -107,7 +143,9 @@ class Gem(Interactable):
     def on_mouse_release(self):
         if not self.grabbed:
             return
-        print(f"[gem {self.color_name}] release at ({self.x:.0f}, {self.y:.0f}) -> checking slot")
+        print(
+            f"[gem {self.color_name}] release at ({self.x:.0f}, {self.y:.0f}) -> checking slot"
+        )
         self.grabbed = False
         self._check_solved()
 

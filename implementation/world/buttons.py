@@ -8,10 +8,21 @@ import config
 # Will add code comments in the end since this will be getting updated and I dont want to waste precise time
 # rewriting my funny comments over and over again :3
 
+
 class Button:
 
-    def __init__(self, x, y, width, height, text, batch, group,
-                 idle_color=(80, 80, 80), active_color=(60, 180, 90)):
+    def __init__(
+        self,
+        x,
+        y,
+        width,
+        height,
+        text,
+        batch,
+        group,
+        idle_color=(80, 80, 80),
+        active_color=(60, 180, 90),
+    ):
         self.x = x
         self.y = y
         self.width = width
@@ -24,13 +35,21 @@ class Button:
             x, y, width, height, color=idle_color, batch=batch, group=group
         )
         self.label = pyglet.text.Label(
-            text, x=x + width / 2, y=y + height / 2,
-            anchor_x="center", anchor_y="center",
-            font_name=config.FONT_NAME, font_size=16, batch=batch, group=group,
+            text,
+            x=x + width / 2,
+            y=y + height / 2,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=config.FONT_NAME,
+            font_size=16,
+            batch=batch,
+            group=group,
         )
 
     def hit_test(self, x, y):
-        return self.x <= x <= self.x + self.width and self.y <= y <= self.y + self.height
+        return (
+            self.x <= x <= self.x + self.width and self.y <= y <= self.y + self.height
+        )
 
     def set_active(self, active):
         self.active = active

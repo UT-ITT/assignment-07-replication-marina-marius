@@ -20,6 +20,7 @@ from entities.enemy import Enemy
 # Will add code comments in the end since this will be getting updated and I dont want to waste precise time
 # rewriting my funny comments over and over again :3
 
+
 class DungeonState:
 
     def __init__(self, manager):
@@ -29,9 +30,10 @@ class DungeonState:
         self.entity_group = pyglet.graphics.Group(order=1)
         self.ui_group = pyglet.graphics.Group(order=2)
 
-
         self.tilemap = TileMap(
-            "assets/chamber/dungeon.tmx", self.batch, self.bg_group,
+            "assets/chamber/dungeon.tmx",
+            self.batch,
+            self.bg_group,
             wall_collision_shrink=0.5,
         )
         self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
@@ -47,33 +49,52 @@ class DungeonState:
         # gem/exit-gate/eventual diamond all sit on the opposite (right)
         # side, so this is the natural "start" end of the room. (40, 360)
         self.player1 = Player1(
-            40, 360, self.batch, self.entity_group, shield=self.shield,
+            40,
+            360,
+            self.batch,
+            self.entity_group,
+            shield=self.shield,
             collision_scale=self.tilemap.scale,
         )
         self.player2 = Player2(
             104, 360, self.batch, self.entity_group, collision_scale=self.tilemap.scale
         )
 
-        self.hearts1 = HeartsDisplay(20, config.WIN_HEIGHT - 60, self.batch, self.ui_group)
-        self.hearts2 = HeartsDisplay(20, config.WIN_HEIGHT - 90, self.batch, self.ui_group)
+        self.hearts1 = HeartsDisplay(
+            20, config.WIN_HEIGHT - 60, self.batch, self.ui_group
+        )
+        self.hearts2 = HeartsDisplay(
+            20, config.WIN_HEIGHT - 90, self.batch, self.ui_group
+        )
 
         self.lever = Interactable(
-            212, 448, 40, self.batch, self.entity_group,
+            212,
+            448,
+            40,
+            self.batch,
+            self.entity_group,
         )
 
         obstacle_positions = [(620, 136), (596, 392)]
         self.obstacles = [
             pyglet.shapes.Rectangle(
-                x, y, config.OBSTACLE_SIZE, config.OBSTACLE_SIZE,
-                color=(90, 80, 70), batch=self.batch, group=self.entity_group,
+                x,
+                y,
+                config.OBSTACLE_SIZE,
+                config.OBSTACLE_SIZE,
+                color=(90, 80, 70),
+                batch=self.batch,
+                group=self.entity_group,
             )
             for x, y in obstacle_positions
         ]
 
         # cheat sheet so P1 knows roughly what to sing instead of guessing
         self.pitch_legend = PitchLegend(
-            config.WIN_WIDTH - 160, config.WIN_HEIGHT - 70,
-            self.batch, self.ui_group,
+            config.WIN_WIDTH - 160,
+            config.WIN_HEIGHT - 70,
+            self.batch,
+            self.ui_group,
         )
 
         self.enemies = []
@@ -88,18 +109,27 @@ class DungeonState:
 
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch the gem to wake it | P1: sing it its color to start the fight",
-            x=20, y=config.WIN_HEIGHT - 30,
-            anchor_x="left", anchor_y="center",
-            font_name=config.FONT_NAME, font_size=14, color=config.TEXT_COLOR,
-            batch=self.batch, group=self.ui_group,
+            x=20,
+            y=config.WIN_HEIGHT - 30,
+            anchor_x="left",
+            anchor_y="center",
+            font_name=config.FONT_NAME,
+            font_size=14,
+            color=config.TEXT_COLOR,
+            batch=self.batch,
+            group=self.ui_group,
         )
 
         self.keys = key.KeyStateHandler()
 
         # trigger for combat phase
         self.gem = Gem(
-            config.WIN_WIDTH - 110, config.WIN_HEIGHT // 2, 64,
-            self.batch, self.entity_group, on_solved=self._start_combat,
+            config.WIN_WIDTH - 110,
+            config.WIN_HEIGHT // 2,
+            64,
+            self.batch,
+            self.entity_group,
+            on_solved=self._start_combat,
             stats=self.manager.stats,
         )
 
@@ -107,9 +137,14 @@ class DungeonState:
         # TODO: does that work??
         # sung melody
         self.gate = Gate(
-            config.WIN_WIDTH - 150, config.WIN_HEIGHT // 2 - 40, 80,
-            self.batch, self.entity_group, on_unlock=on_unlock,
-            melody=melody, stats=self.manager.stats,
+            config.WIN_WIDTH - 150,
+            config.WIN_HEIGHT // 2 - 40,
+            80,
+            self.batch,
+            self.entity_group,
+            on_unlock=on_unlock,
+            melody=melody,
+            stats=self.manager.stats,
         )
 
     def _start_combat(self):
@@ -125,12 +160,12 @@ class DungeonState:
             "P2: L for gun, pinch hud button then P1 sings its color, click enemies to shoot"
         )
 
-        self.gem.delete() # type: ignore
+        self.gem.delete()  # type: ignore
         self.gem = None
 
     def _spawn_exit_gate(self):
         self.phase = "cleared"
-        # combat gear is done being useful the instant the last enemy drops 
+        # combat gear is done being useful the instant the last enemy drops
         # hide the shield/gun (and their hud buttons, which just
         # follow shield.active/gun.active) same as if P1/P2 had toggled
         # them off by hand, and clear out any bullets still mid-flight
@@ -140,7 +175,9 @@ class DungeonState:
             bullet.destroy(explode=False)
         self.bullets = []
         self._spawn_gate(self._enter_treasure, melody=True)
-        self.hint_label.text = "room clear - P2: wake the exit crystal | P1: sing its melody to open it"
+        self.hint_label.text = (
+            "room clear - P2: wake the exit crystal | P1: sing its melody to open it"
+        )
 
     def _enter_treasure(self):
         self.manager.set_state("treasure")
@@ -166,19 +203,18 @@ class DungeonState:
             self.gem.update(dt)
 
         if self.gem is not None:
-            near = (
-                self.gem.in_range(self.player1.x, self.player1.y)
-                or self.gem.in_range(self.player2.x, self.player2.y)
-            )
+            near = self.gem.in_range(
+                self.player1.x, self.player1.y
+            ) or self.gem.in_range(self.player2.x, self.player2.y)
             self.gem.show_hint(near)
 
         gate = self.gate
         if gate is not None:
             gate.update(dt)
 
-            if gate.try_enter(self.player1, *self.player1.collision_box()): # type: ignore
+            if gate.try_enter(self.player1, *self.player1.collision_box()):  # type: ignore
                 self.player1.sprite.visible = False
-            if gate.try_enter(self.player2, *self.player2.collision_box()): # type: ignore
+            if gate.try_enter(self.player2, *self.player2.collision_box()):  # type: ignore
                 self.player2.sprite.visible = False
 
         if self.phase == "combat":
@@ -232,7 +268,9 @@ class DungeonState:
         # only a same-color bullet gets absorbed anything else flies
         # straight through the tornado like it isn't even there
         if self.shield.blocks(bullet.color) and bullet.hits_rect(
-            self.shield.x - self.shield.size / 2, self.shield.y - self.shield.size / 2, self.shield.size
+            self.shield.x - self.shield.size / 2,
+            self.shield.y - self.shield.size / 2,
+            self.shield.size,
         ):
             bullet.destroy()
             return
@@ -288,7 +326,11 @@ class DungeonState:
 
         if self.phase == "combat":
             bullet = self.player2.try_shoot(
-                x, y, self.gun, self.batch, self.entity_group,
+                x,
+                y,
+                self.gun,
+                self.batch,
+                self.entity_group,
             )
             if bullet is not None:
                 self.bullets.append(bullet)

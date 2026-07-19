@@ -17,11 +17,11 @@ from states.state_treasure import TreasureState
 from states.state_end import EndState
 
 # pick which state to jump straight into: uncomment others
-#TARGET_STATE = "start_menu"
-#TARGET_STATE = "overworld"
+# TARGET_STATE = "start_menu"
+# TARGET_STATE = "overworld"
 TARGET_STATE = "dungeon"
-#TARGET_STATE = "treasure"
-#TARGET_STATE = "end"
+# TARGET_STATE = "treasure"
+# TARGET_STATE = "end"
 
 window = pyglet.window.Window(config.WIN_WIDTH, config.WIN_HEIGHT, config.WIN_TITLE)
 manager = StateManager(window)
@@ -80,8 +80,10 @@ def main():
     video_id = gesture_tracking.select_camera()
     window_x, window_y = window.get_location()
     gesture_tracking.start_tracking(
-        screen_width=window.width, screen_height=window.height,
-        origin_x=window_x, origin_y=window_y,
+        screen_width=window.width,
+        screen_height=window.height,
+        origin_x=window_x,
+        origin_y=window_y,
         video_id=video_id,
     )
 

@@ -28,7 +28,9 @@ def pitch_to_color(pitch):
 class Player1(GridActor):
 
     def __init__(self, x, y, batch, group, shield=None, collision_scale=None):
-        super().__init__(x, y, "assets/player1", batch, group, collision_scale=collision_scale)
+        super().__init__(
+            x, y, "assets/player1", batch, group, collision_scale=collision_scale
+        )
         # not every screen has a shield (looking at you, overworld), so this can stay None
         self.shield = shield
 
@@ -52,7 +54,10 @@ class Player1(GridActor):
 
     def try_interact(self, interactables, radius=64):
         for interactable in interactables:
-            if abs(self.x - interactable.x) <= radius and abs(self.y - interactable.y) <= radius:
+            if (
+                abs(self.x - interactable.x) <= radius
+                and abs(self.y - interactable.y) <= radius
+            ):
                 interactable.interact()
                 return interactable
         return None

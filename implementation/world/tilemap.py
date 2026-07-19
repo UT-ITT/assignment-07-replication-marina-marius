@@ -5,6 +5,7 @@
 # keyowrds will be: overworld, dungeon and treasure
 
 import pyglet
+
 # loads a .tmx file painted in tiled and turns it into pyglet sprites in the given batch
 from pytmx.util_pyglet import load_pyglet
 
@@ -80,7 +81,7 @@ class TileMap:
             return self.data.images[gid]
 
         animation = pyglet.image.Animation(  # type: ignore
-            [  
+            [
                 pyglet.image.AnimationFrame(  # type: ignore
                     self.data.images[frame.gid], frame.duration / 1000
                 )
@@ -134,6 +135,11 @@ class TileMap:
                 tile_bottom = row_from_bottom * self.tile_height + margin_y
                 tile_right = tile_left + shrunk_width
                 tile_top = tile_bottom + shrunk_height
-                if left < tile_right and right > tile_left and bottom < tile_top and top > tile_bottom:
+                if (
+                    left < tile_right
+                    and right > tile_left
+                    and bottom < tile_top
+                    and top > tile_bottom
+                ):
                     return False
         return True

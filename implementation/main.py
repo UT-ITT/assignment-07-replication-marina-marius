@@ -77,11 +77,11 @@ def create_debug_window():
 
     @debug_window.event
     def on_draw():
-        debug_window.clear()
+        debug_window.clear()  # type: ignore
         r, g, b = debug_color
         pyglet.shapes.Rectangle(20, 60, 180, 120, color=(r, g, b)).draw()
-        debug_label.text = f"pitch: {debug_pitch:.2f} Hz\ncolor: rgb({r}, {g}, {b})"
-        debug_label.draw()
+        debug_label.text = f"pitch: {debug_pitch:.2f} Hz\ncolor: rgb({r}, {g}, {b})"  # type: ignore
+        debug_label.draw()  # type: ignore
 
 
 def update(dt):
@@ -112,6 +112,7 @@ def update(dt):
     pinch = gesture_tracking.is_pinching
     print(f"gesture: x={cx} y={cy} pinch={pinch}")
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="show debug windows")
@@ -127,9 +128,12 @@ def main():
     window_x, window_y = window.get_location()
     # the preview is its own real OS window living in the same process as the game window
     gesture_tracking.start_tracking(
-        screen_width=window.width, screen_height=window.height,
-        origin_x=window_x, origin_y=window_y,
-        show_video=args.debug, video_id=video_id,
+        screen_width=window.width,
+        screen_height=window.height,
+        origin_x=window_x,
+        origin_y=window_y,
+        show_video=args.debug,
+        video_id=video_id,
     )
 
     if args.debug:
@@ -157,6 +161,7 @@ def main():
         # small delay to let threads close cleanly
         time.sleep(0.2)
         print("done")
+
 
 if __name__ == "__main__":
     main()

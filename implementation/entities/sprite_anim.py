@@ -6,7 +6,9 @@ _animation_cache = {}
 _image_cache = {}
 
 
-def load_animation(path_prefix, frame_numbers, duration, loop, name_prefix="", anchor_center=True):
+def load_animation(
+    path_prefix, frame_numbers, duration, loop, name_prefix="", anchor_center=True
+):
     # filenames are f"{path_prefix}/{name_prefix}{n:03d}.png"
     # name_prefix is only needed when the number isn't the whole filename (skull001.png
     # vs projectile's plain 001.png). anchor_center=False for anything whose

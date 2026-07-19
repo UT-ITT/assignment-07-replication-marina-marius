@@ -16,6 +16,7 @@ MODE_BUTTONS = [
     ("size", "Scream -> Size (3s)"),
 ]
 
+
 class ShieldHud:
     # pops up whenever the shield is out (F key), P2 pinches/clicks a button
     # here to decide which of the two mechanics P1 voice controls right now.
@@ -102,7 +103,9 @@ class GunHud:
     def sync_with_gun(self):
         self.set_visible(self.gun.active)
         self.button.rect.color = self.gun.color[:3]
-        self.button.label.text = "Gun: LOCKED" if self.gun.locked else "Gun: sing a color!"
+        self.button.label.text = (
+            "Gun: LOCKED" if self.gun.locked else "Gun: sing a color!"
+        )
 
     def on_mouse_press(self, x, y, button, modifiers):
         if not self.gun.active or not self.button.hit_test(x, y):

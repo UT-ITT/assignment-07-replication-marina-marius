@@ -1,5 +1,6 @@
 import os
-os.environ['OPENCV_LOG_LEVEL'] = 'SILENT'
+
+os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
 import time
 import urllib.request
 import sys
@@ -16,13 +17,20 @@ class Button:
 
 
 if sys.platform == "darwin":
-    _core_graphics = cdll.LoadLibrary("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices")
+    _core_graphics = cdll.LoadLibrary(
+        "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices"
+    )
 
     class CGPoint(Structure):
         _fields_ = [("x", c_double), ("y", c_double)]
 
     _core_graphics.CGEventCreateMouseEvent.restype = c_void_p
-    _core_graphics.CGEventCreateMouseEvent.argtypes = [c_void_p, c_uint32, CGPoint, c_uint32]
+    _core_graphics.CGEventCreateMouseEvent.argtypes = [
+        c_void_p,
+        c_uint32,
+        CGPoint,
+        c_uint32,
+    ]
     _core_graphics.CGEventPost.argtypes = [c_uint32, c_void_p]
     _core_graphics.CGEventSetIntegerValueField.argtypes = [c_void_p, c_uint32, c_int64]
 
@@ -48,8 +56,12 @@ if sys.platform == "darwin":
             point = CGPoint(x, y)
             event_type = 6 if self._button_down else 5
             event = _core_graphics.CGEventCreateMouseEvent(0, event_type, point, 0)
-            _core_graphics.CGEventSetIntegerValueField(event, _K_CG_MOUSE_EVENT_DELTA_X, delta_x)
-            _core_graphics.CGEventSetIntegerValueField(event, _K_CG_MOUSE_EVENT_DELTA_Y, delta_y)
+            _core_graphics.CGEventSetIntegerValueField(
+                event, _K_CG_MOUSE_EVENT_DELTA_X, delta_x
+            )
+            _core_graphics.CGEventSetIntegerValueField(
+                event, _K_CG_MOUSE_EVENT_DELTA_Y, delta_y
+            )
             _core_graphics.CGEventPost(0, event)
 
         def press(self, button):
@@ -65,7 +77,9 @@ if sys.platform == "darwin":
                 x, y = self._position
                 event = _core_graphics.CGEventCreateMouseEvent(0, 2, CGPoint(x, y), 0)
                 _core_graphics.CGEventPost(0, event)
+
 else:
+
     class Controller:
         def __init__(self):
             self._position = (0, 0)
@@ -84,6 +98,7 @@ else:
         def release(self, button):
             return None
 
+
 # global variables for game access
 cursor_x = 0
 cursor_y = 0
@@ -94,19 +109,36 @@ activation_requested = False
 
 # hand connections for drawing
 hand_connections = [
-    (0, 1), (1, 2), (2, 3), (3, 4),           
-    (5, 6), (6, 7), (7, 8),                   
-    (9, 10), (10, 11), (11, 12),              
-    (13, 14), (14, 15), (15, 16),             
-    (17, 18), (18, 19), (19, 20),             
-    (0, 5), (5, 9), (9, 13), (13, 17), (0, 17)
+    (0, 1),
+    (1, 2),
+    (2, 3),
+    (3, 4),
+    (5, 6),
+    (6, 7),
+    (7, 8),
+    (9, 10),
+    (10, 11),
+    (11, 12),
+    (13, 14),
+    (14, 15),
+    (15, 16),
+    (17, 18),
+    (18, 19),
+    (19, 20),
+    (0, 5),
+    (5, 9),
+    (9, 13),
+    (13, 17),
+    (0, 17),
 ]
+
 
 def download_model():
     model_path = "hand_landmarker.task"
     if not os.path.exists(model_path):
         url = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
         urllib.request.urlretrieve(url, model_path)
+
 
 def draw_landmarks(frame, hand_landmarks):
     h, w, _ = frame.shape
@@ -122,12 +154,14 @@ def draw_landmarks(frame, hand_landmarks):
         cx, cy = int(lm.x * w), int(lm.y * h)
         cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
 
+
 def clamp(value, low, high):
     if value < low:
         return low
     if value > high:
         return high
     return value
+
 
 def landmark_to_screen(norm_x, norm_y, screen_width, screen_height):
     x = int(clamp(norm_x, 0.0, 1.0) * screen_width)
@@ -141,8 +175,10 @@ def landmark_to_screen(norm_x, norm_y, screen_width, screen_height):
 # without adding the kind of lag a bigger position-history average would
 CURSOR_SMOOTHING = 0.4
 
+
 def lerp(start, end, amount):
     return start + (end - start) * amount
+
 
 def interpolate_points(start_point, end_point, steps):
     points = []
@@ -153,8 +189,10 @@ def interpolate_points(start_point, end_point, steps):
         points.append((x, y))
     return points
 
+
 def choose_pointer_landmark(hand_landmarks):
     return hand_landmarks[8]
+
 
 # two different thresholds instead of one: a single cutoff means finger
 # jitter that straddles it makes check_pinch flicker true/false several
@@ -167,12 +205,16 @@ def choose_pointer_landmark(hand_landmarks):
 PINCH_ENTER_DISTANCE = 0.045
 PINCH_EXIT_DISTANCE = 0.07
 
+
 def check_pinch(hand_landmarks, currently_pinching=False):
     index_tip = hand_landmarks[8]
     thumb_tip = hand_landmarks[4]
-    distance = ((index_tip.x - thumb_tip.x) ** 2 + (index_tip.y - thumb_tip.y) ** 2) ** 0.5
+    distance = (
+        (index_tip.x - thumb_tip.x) ** 2 + (index_tip.y - thumb_tip.y) ** 2
+    ) ** 0.5
     threshold = PINCH_EXIT_DISTANCE if currently_pinching else PINCH_ENTER_DISTANCE
     return distance < threshold
+
 
 def click_via_landmark(pinching, mouse, is_left_pressed):
     if pinching and not is_left_pressed:
@@ -186,6 +228,7 @@ def click_via_landmark(pinching, mouse, is_left_pressed):
 
     return is_left_pressed
 
+
 def camera_backend():
     if sys.platform == "darwin":
         return cv2.CAP_AVFOUNDATION
@@ -193,11 +236,13 @@ def camera_backend():
         return cv2.CAP_DSHOW
     return cv2.CAP_ANY
 
+
 def camera_backends():
     backend = camera_backend()
     if backend == cv2.CAP_ANY:
         return [backend]
     return [backend, cv2.CAP_ANY]
+
 
 def open_camera(video_id):
     for backend in camera_backends():
@@ -206,6 +251,7 @@ def open_camera(video_id):
             return capture
         capture.release()
     return cv2.VideoCapture(video_id)
+
 
 def select_camera():
     selection = input("select webcam id [0] ").strip()
@@ -216,7 +262,15 @@ def select_camera():
     except ValueError:
         return 0
 
-def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, show_video=False, video_id=None):
+
+def hand_loop(
+    screen_width=1920,
+    screen_height=1080,
+    origin_x=0,
+    origin_y=0,
+    show_video=False,
+    video_id=None,
+):
     global cursor_x, cursor_y, is_pinching, is_tracking
 
     download_model()
@@ -224,15 +278,13 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
         video_id = select_camera()
 
     mouse = Controller()
-    
-    base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
+
+    base_options = python.BaseOptions(model_asset_path="hand_landmarker.task")
     options = vision.HandLandmarkerOptions(
-        base_options=base_options,
-        running_mode=vision.RunningMode.VIDEO,
-        num_hands=1
+        base_options=base_options, running_mode=vision.RunningMode.VIDEO, num_hands=1
     )
     detector = vision.HandLandmarker.create_from_options(options)
-    
+
     capture = open_camera(video_id)
     if not capture.isOpened():
         print(f"failed to open camera {video_id}")
@@ -242,7 +294,7 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
 
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    
+
     start_time = time.time()
     previous_point = None
     last_move_time = time.time()
@@ -277,7 +329,9 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
             else:
                 smoothed_x = lerp(smoothed_x, pointer_landmark.x, CURSOR_SMOOTHING)
                 smoothed_y = lerp(smoothed_y, pointer_landmark.y, CURSOR_SMOOTHING)
-            cx, cy = landmark_to_screen(smoothed_x, smoothed_y, screen_width, screen_height)
+            cx, cy = landmark_to_screen(
+                smoothed_x, smoothed_y, screen_width, screen_height
+            )
             cursor_x = cx
             cursor_y = cy
 
@@ -295,7 +349,7 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
                     mouse.position = point
 
                 previous_point = current_point
-            
+
             is_pinching = check_pinch(hand_landmarks, is_pinching)
             is_left_pressed = click_via_landmark(is_pinching, mouse, is_left_pressed)
         else:
@@ -313,7 +367,7 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
                 cv2.imshow("pointing input", frame)
 
                 # quit on q key
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                if cv2.waitKey(1) & 0xFF == ord("q"):
                     is_tracking = False
                     break
 
@@ -324,13 +378,21 @@ def hand_loop(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, sho
             except cv2.error:
                 print("video preview disabled because OpenCV windowing is unavailable")
                 show_video = False
-            
+
     capture.release()
     if show_video:
         cv2.destroyAllWindows()
     detector.close()
 
-def start_tracking(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0, show_video=False, video_id=None):
+
+def start_tracking(
+    screen_width=1920,
+    screen_height=1080,
+    origin_x=0,
+    origin_y=0,
+    show_video=False,
+    video_id=None,
+):
     global is_tracking
     is_tracking = True
 
@@ -338,13 +400,17 @@ def start_tracking(screen_width=1920, screen_height=1080, origin_x=0, origin_y=0
     thread = threading.Thread(
         target=hand_loop,
         kwargs={
-            "screen_width": screen_width, "screen_height": screen_height,
-            "origin_x": origin_x, "origin_y": origin_y,
-            "show_video": show_video, "video_id": video_id,
+            "screen_width": screen_width,
+            "screen_height": screen_height,
+            "origin_x": origin_x,
+            "origin_y": origin_y,
+            "show_video": show_video,
+            "video_id": video_id,
         },
-        daemon=True
+        daemon=True,
     )
     thread.start()
+
 
 def stop_tracking():
     global is_tracking

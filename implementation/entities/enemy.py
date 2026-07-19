@@ -23,8 +23,12 @@ ENEMY_LOOP_FRAMES = tuple(range(0, 4))
 
 def _bat_animation(folder):
     return load_animation(
-        f"assets/enemy/{folder}", ENEMY_LOOP_FRAMES, ENEMY_FRAME_DURATION,
-        loop=True, name_prefix="tile", anchor_center=False,
+        f"assets/enemy/{folder}",
+        ENEMY_LOOP_FRAMES,
+        ENEMY_FRAME_DURATION,
+        loop=True,
+        name_prefix="tile",
+        anchor_center=False,
     )
 
 
@@ -45,7 +49,11 @@ class Enemy:
         self._wander_target = self._pick_wander_target()
 
         self.sprite = pyglet.sprite.Sprite(
-            _bat_animation(color_folder(color)), x=x, y=y, batch=batch, group=group,
+            _bat_animation(color_folder(color)),
+            x=x,
+            y=y,
+            batch=batch,
+            group=group,
         )
         self.sprite.scale = self.size / ENEMY_SPRITE_PIXELS
 
@@ -60,7 +68,7 @@ class Enemy:
     def _wander(self, dt):
         tx, ty = self._wander_target
         dx, dy = tx - self.x, ty - self.y
-        distance = (dx ** 2 + dy ** 2) ** 0.5
+        distance = (dx**2 + dy**2) ** 0.5
         if distance < 4:
             self._wander_target = self._pick_wander_target()
             return
@@ -88,8 +96,14 @@ class Enemy:
             targets, key=lambda t: (t[0] - self.x) ** 2 + (t[1] - self.y) ** 2
         )
         return Projectile(
-            self.x + self.size / 2, self.y + self.size / 2,
-            target_x, target_y, self.color, batch, group, owner="enemy",
+            self.x + self.size / 2,
+            self.y + self.size / 2,
+            target_x,
+            target_y,
+            self.color,
+            batch,
+            group,
+            owner="enemy",
             speed=config.ENEMY_BULLET_SPEED,
         )
 

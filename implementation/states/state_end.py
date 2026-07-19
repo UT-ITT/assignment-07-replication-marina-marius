@@ -10,6 +10,7 @@ import config
 # Will add code comments in the end since this will be getting updated and I dont want to waste precise time
 # rewriting my funny comments over and over again :3
 
+
 class EndState:
 
     def __init__(self, manager):
@@ -25,19 +26,28 @@ class EndState:
 
         self.title_label = pyglet.text.Label(
             "",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT - 100,
-            anchor_x="center", anchor_y="center",
-            font_name=config.FONT_NAME, font_size=32,
-            batch=self.batch, group=self.ui_group,
+            x=config.WIN_WIDTH // 2,
+            y=config.WIN_HEIGHT - 100,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=config.FONT_NAME,
+            font_size=32,
+            batch=self.batch,
+            group=self.ui_group,
         )
 
         # TODO: swap for real end-game metrics UI once we have one
         self.stats_label = pyglet.text.Label(
             "",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT - 160,
-            anchor_x="center", anchor_y="center",
-            font_name=config.FONT_NAME, font_size=16, color=config.TEXT_COLOR,
-            batch=self.batch, group=self.ui_group,
+            x=config.WIN_WIDTH // 2,
+            y=config.WIN_HEIGHT - 160,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=config.FONT_NAME,
+            font_size=16,
+            color=config.TEXT_COLOR,
+            batch=self.batch,
+            group=self.ui_group,
         )
 
         self.restart_button = Button(
@@ -52,10 +62,15 @@ class EndState:
 
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch Restart (or press ENTER) to head back to the start menu",
-            x=config.WIN_WIDTH // 2, y=60,
-            anchor_x="center", anchor_y="center",
-            font_name=config.FONT_NAME, font_size=14, color=config.TEXT_COLOR,
-            batch=self.batch, group=self.ui_group,
+            x=config.WIN_WIDTH // 2,
+            y=60,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=config.FONT_NAME,
+            font_size=14,
+            color=config.TEXT_COLOR,
+            batch=self.batch,
+            group=self.ui_group,
         )
 
         self._duration = 0.0
@@ -77,7 +92,9 @@ class EndState:
                 f"pitch accuracy: {accuracy:.0f}%"
             )
         else:
-            self.title_label.text = "Damn, didnt know we had losers as tutores *side eye*"
+            self.title_label.text = (
+                "Damn, didnt know we had losers as tutores *side eye*"
+            )
             self.title_label.color = (200, 60, 60, 255)
             self.stats_label.text = f"time: {self._duration:.1f}s"
 

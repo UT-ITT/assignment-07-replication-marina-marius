@@ -14,6 +14,7 @@ from world.tilemap import TileMap
 # Will add code comments in the end since this will be getting updated and I dont want to waste precise time
 # rewriting my funny comments over and over again :3
 
+
 class OverworldState:
 
     def __init__(self, manager):
@@ -46,13 +47,20 @@ class OverworldState:
             (736, 360),
         ]
         gem_spawn_positions = [
-            (200, 436), (400, 380), (600, 356), (792, 356),
+            (200, 436),
+            (400, 380),
+            (600, 356),
+            (792, 356),
         ]
         self.gems = [
             Gem(
-                gem_spawn_positions[i][0], gem_spawn_positions[i][1], 50,
-                self.batch, self.entity_group,
-                target_color=gem_colors[i], target_slot=gem_slot_positions[i],
+                gem_spawn_positions[i][0],
+                gem_spawn_positions[i][1],
+                50,
+                self.batch,
+                self.entity_group,
+                target_color=gem_colors[i],
+                target_slot=gem_slot_positions[i],
                 stats=self.manager.stats,
             )
             for i in range(4)
@@ -62,15 +70,21 @@ class OverworldState:
         # mechanic A: P1 sings its color to unlock it, then both walk in
         # but it can't even be woken up until all 4 gems are in place
         self.gate = Gate(
-            822, 240, 120,
-            self.batch, self.entity_group, on_unlock=self._enter_dungeon,
+            822,
+            240,
+            120,
+            self.batch,
+            self.entity_group,
+            on_unlock=self._enter_dungeon,
             stats=self.manager.stats,
         )
 
         # cheat sheet so P1 knows roughly what to sing instead of guessing
         self.pitch_legend = PitchLegend(
-            config.WIN_WIDTH - 160, config.WIN_HEIGHT - 70,
-            self.batch, self.ui_group,
+            config.WIN_WIDTH - 160,
+            config.WIN_HEIGHT - 70,
+            self.batch,
+            self.ui_group,
         )
 
         self.hint_label = pyglet.text.Label(
@@ -106,28 +120,28 @@ class OverworldState:
 
         for gem in self.gems:
             gem.update(dt)
-            near = (
-                gem.in_range(self.player1.x, self.player1.y)
-                or gem.in_range(self.player2.x, self.player2.y)
+            near = gem.in_range(self.player1.x, self.player1.y) or gem.in_range(
+                self.player2.x, self.player2.y
             )
             gem.show_hint(near)
 
         gems_done = all(gem.solved for gem in self.gems)
         if gems_done and not self._gems_done_notified:
             self._gems_done_notified = True
-            self.hint_label.text = "P2: click/pinch the gate to wake it | P1: sing its color to unlock it"
+            self.hint_label.text = (
+                "P2: click/pinch the gate to wake it | P1: sing its color to unlock it"
+            )
 
-        gate_near = (
-            self.gate.in_range(self.player1.x, self.player1.y)
-            or self.gate.in_range(self.player2.x, self.player2.y)
-        )
+        gate_near = self.gate.in_range(
+            self.player1.x, self.player1.y
+        ) or self.gate.in_range(self.player2.x, self.player2.y)
         self.gate.show_hint(gems_done and gate_near)
 
         # P1 and P2 have to physically walk in, whoevers first just disappears
         # until the other catches up (see Gate.try_enter)
-        if self.gate.try_enter(self.player1, *self.player1.collision_box()): # type: ignore
+        if self.gate.try_enter(self.player1, *self.player1.collision_box()):  # type: ignore
             self.player1.sprite.visible = False
-        if self.gate.try_enter(self.player2, *self.player2.collision_box()): # type: ignore
+        if self.gate.try_enter(self.player2, *self.player2.collision_box()):  # type: ignore
             self.player2.sprite.visible = False
 
     def on_draw(self):

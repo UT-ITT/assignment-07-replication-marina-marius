@@ -51,7 +51,16 @@ class GridActor:
     # something even though nobody is sliding continuously anymore
     STEP_INTERVAL = config.TILE_SIZE / config.PLAYER_SPEED
 
-    def __init__(self, x, y, sprite_folder, batch, group, size=config.TILE_SIZE, collision_scale=None):
+    def __init__(
+        self,
+        x,
+        y,
+        sprite_folder,
+        batch,
+        group,
+        size=config.TILE_SIZE,
+        collision_scale=None,
+    ):
         self.x = x
         self.y = y
         self.size = size
@@ -78,8 +87,11 @@ class GridActor:
             self.collision_height = render_size * COLLISION_SHRINK
 
         self.sprite = pyglet.sprite.Sprite(
-            idle_image, x=x + self._render_offset, y=y + self._render_offset,
-            batch=batch, group=group,
+            idle_image,
+            x=x + self._render_offset,
+            y=y + self._render_offset,
+            batch=batch,
+            group=group,
         )
         self.sprite.width = render_size
         self.sprite.height = render_size
@@ -133,7 +145,9 @@ class GridActor:
 
             check_x = new_x + (self.size - self.collision_width) / 2
             check_y = new_y + (self.size - self.collision_height) / 2
-            if not is_walkable(check_x, check_y, self.collision_width, self.collision_height):
+            if not is_walkable(
+                check_x, check_y, self.collision_width, self.collision_height
+            ):
                 return
 
         self.x, self.y = new_x, new_y

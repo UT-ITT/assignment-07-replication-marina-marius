@@ -5,7 +5,12 @@ import random
 import pyglet
 
 import config
-from entities.shield import color_folder, colors_match, frequency_bucket, frequency_to_color
+from entities.shield import (
+    color_folder,
+    colors_match,
+    frequency_bucket,
+    frequency_to_color,
+)
 from entities.sprite_anim import load_animation, load_image
 from input import audio_input
 from world.interactable import Interactable
@@ -20,8 +25,12 @@ GATE_LOOP_FRAMES = tuple(range(0, 6))
 def _gate_loop_animation(folder):
 
     return load_animation(
-        f"assets/gate/{folder}", GATE_LOOP_FRAMES, GATE_FRAME_DURATION, loop=True,
-        name_prefix="tile", anchor_center=False,
+        f"assets/gate/{folder}",
+        GATE_LOOP_FRAMES,
+        GATE_FRAME_DURATION,
+        loop=True,
+        name_prefix="tile",
+        anchor_center=False,
     )
 
 
@@ -31,20 +40,35 @@ def _gate_listening_image(folder):
 
 def random_melody(length=None):
 
-    length = length or random.randint(config.MELODY_LENGTH_MIN, config.MELODY_LENGTH_MAX)
+    length = length or random.randint(
+        config.MELODY_LENGTH_MIN, config.MELODY_LENGTH_MAX
+    )
     note_count = len(config.SHIELD_COLORS)
     melody = []
     for _ in range(length):
-        choices = [b for b in range(note_count) if b != (melody[-1] if melody else None)]
+        choices = [
+            b for b in range(note_count) if b != (melody[-1] if melody else None)
+        ]
         melody.append(random.choice(choices))
     return melody
 
 
 class Gate(Interactable):
 
-    def __init__(self, x, y, size, batch, group, on_unlock=None,
-                 target_color=None, melody=None, stats=None, walk_in_required=True,
-                 hint="P2: click/pinch to wake it up, then P1: sing its color"):
+    def __init__(
+        self,
+        x,
+        y,
+        size,
+        batch,
+        group,
+        on_unlock=None,
+        target_color=None,
+        melody=None,
+        stats=None,
+        walk_in_required=True,
+        hint="P2: click/pinch to wake it up, then P1: sing its color",
+    ):
 
         self.x = x
         self.y = y
@@ -67,7 +91,9 @@ class Gate(Interactable):
         else:
             self.target_color = target_color or random.choice(config.SHIELD_COLORS)
             self.target_folder = color_folder(self.target_color)
-            self.color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(self.target_color)]
+            self.color_name = config.SHIELD_COLOR_NAMES[
+                config.SHIELD_COLORS.index(self.target_color)
+            ]
 
         self.on_unlock = on_unlock
         # optional GameStats if given, every sung frame while listening
@@ -82,15 +108,25 @@ class Gate(Interactable):
         self._entered = set()  # holds whichever player object(s) have walked in
 
         self.sprite = pyglet.sprite.Sprite(
-            _gate_loop_animation("basic"), x=x, y=y, batch=batch, group=group,
+            _gate_loop_animation("basic"),
+            x=x,
+            y=y,
+            batch=batch,
+            group=group,
         )
         self.sprite.scale = size / GATE_SPRITE_PIXELS
 
         self.hint_label = pyglet.text.Label(
-            hint, x=x + size / 2, y=y + size + 10,
-            anchor_x="center", anchor_y="bottom",
-            font_name=config.FONT_NAME, font_size=11, color=(255, 255, 255, 255),
-            batch=batch, group=group,
+            hint,
+            x=x + size / 2,
+            y=y + size + 10,
+            anchor_x="center",
+            anchor_y="bottom",
+            font_name=config.FONT_NAME,
+            font_size=11,
+            color=(255, 255, 255, 255),
+            batch=batch,
+            group=group,
         )
         self.hint_label.visible = False
 
@@ -99,7 +135,9 @@ class Gate(Interactable):
             return False
         self.listening = True
         if self.melody:
-            self.hint_label.text = f"P1: sing {self.color_name.upper()} in order to unlock it!"
+            self.hint_label.text = (
+                f"P1: sing {self.color_name.upper()} in order to unlock it!"
+            )
         else:
             self.hint_label.text = f"P1: sing {self.color_name.upper()} to unlock it!"
         self.sprite.image = _gate_listening_image("basic")
@@ -141,14 +179,18 @@ class Gate(Interactable):
             self._last_bucket = None
             self.sprite.image = _gate_listening_image("basic")
         else:
-            self.sprite.image = _gate_listening_image(color_folder(frequency_to_color(frequency)))
+            self.sprite.image = _gate_listening_image(
+                color_folder(frequency_to_color(frequency))
+            )
 
         self._note_timer += dt
         if self._melody_progress and self._note_timer > config.MELODY_NOTE_TIMEOUT:
             self._melody_progress = 0
             self._last_bucket = None
             self._note_timer = 0.0
-            self.hint_label.text = f"P1: sing {self.color_name.upper()} in order to unlock it!"
+            self.hint_label.text = (
+                f"P1: sing {self.color_name.upper()} in order to unlock it!"
+            )
 
         if frequency <= 0:
             return
@@ -177,7 +219,9 @@ class Gate(Interactable):
         else:
             # wrong note, start the sequence over from scratch
             self._melody_progress = 0
-            self.hint_label.text = f"P1: sing {self.color_name.upper()} in order to unlock it!"
+            self.hint_label.text = (
+                f"P1: sing {self.color_name.upper()} in order to unlock it!"
+            )
 
     def _lock(self):
         self.locked = True
@@ -194,8 +238,10 @@ class Gate(Interactable):
             return False
 
         overlaps = (
-            x < self.x + self.size and x + width > self.x
-            and y < self.y + self.size and y + height > self.y
+            x < self.x + self.size
+            and x + width > self.x
+            and y < self.y + self.size
+            and y + height > self.y
         )
         if not overlaps:
             return False

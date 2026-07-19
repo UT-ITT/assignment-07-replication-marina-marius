@@ -14,6 +14,7 @@ from world.gate import LOCK_HOLD_TIME, COLOR_TOLERANCE
 # Will add code comments in the end since this will be getting updated and I dont want to waste precise time
 # rewriting my funny comments over and over again :3
 
+
 class StartMenuState:
 
     def __init__(self, manager):
@@ -21,7 +22,7 @@ class StartMenuState:
         self.batch = pyglet.graphics.Batch()
         self.bg_group = pyglet.graphics.Group(order=0)
         self.ui_group = pyglet.graphics.Group(order=1)
-        
+
         self.tilemap = TileMap(
             "assets/chamber/startscreen.tmx", self.batch, self.bg_group
         )
@@ -84,8 +85,10 @@ class StartMenuState:
 
         # cheat sheet so P1 knows roughly what to sing instead of guessing
         self.pitch_legend = PitchLegend(
-            config.WIN_WIDTH // 2 - 61, 40,
-            self.batch, self.ui_group,
+            config.WIN_WIDTH // 2 - 61,
+            40,
+            self.batch,
+            self.ui_group,
         )
 
         self.phase = "idle"  # idle -> listening -> locked
@@ -125,7 +128,7 @@ class StartMenuState:
 
     def _lock(self):
         self.phase = "locked"
-        self.continue_button.rect.color = self.target_color[:3] # type: ignore
+        self.continue_button.rect.color = self.target_color[:3]  # type: ignore
         self.continue_button.label.text = "Continue"
         self.hint_label.text = "P2: click/pinch it again to head into the world"
 
@@ -140,7 +143,9 @@ class StartMenuState:
             self.phase = "listening"
             self.target_color = random.choice(config.SHIELD_COLORS)
             self._match_timer = 0.0
-            color_name = config.SHIELD_COLOR_NAMES[config.SHIELD_COLORS.index(self.target_color)]
+            color_name = config.SHIELD_COLOR_NAMES[
+                config.SHIELD_COLORS.index(self.target_color)
+            ]
             self.hint_label.text = f"P1: sing {color_name.upper()} to match the button! (see the legend below)"
         elif self.phase == "locked":
             self.manager.stats.start_run()

@@ -14,7 +14,9 @@ NORMAL_TINT = (255, 255, 255)
 class Player2(GridActor):
 
     def __init__(self, x, y, batch, group, collision_scale=None):
-        super().__init__(x, y, "assets/player2", batch, group, collision_scale=collision_scale)
+        super().__init__(
+            x, y, "assets/player2", batch, group, collision_scale=collision_scale
+        )
 
     def update(self, dt, keys, is_walkable=None):
         dy = self.axis_from_keys(keys, key.DOWN, key.UP)

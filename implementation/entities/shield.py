@@ -65,7 +65,7 @@ def _tornado_idle_animation(folder):
 
 
 class PitchColorLock:
-    # shared "sing a color and hold it steady to lock it in" tracker, 
+    # shared "sing a color and hold it steady to lock it in" tracker,
     # not matching a pre-chosen target like the gate/gem/chest do, just picking
     # whichever of the 4 colors you hold steadiest for PITCH_LOCK_HOLD_TIME.
     # both the shield's color mode and the gun's color picker work off this
