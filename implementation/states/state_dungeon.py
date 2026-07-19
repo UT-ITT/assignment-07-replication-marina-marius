@@ -113,14 +113,16 @@ class DungeonState:
     def _start_combat(self):
         self.phase = "combat"
         self.gate = None
-        count = random.randint(config.ENEMY_COUNT_MIN, config.ENEMY_COUNT_MAX)
-        for _ in range(count):
+        # one enemy per color now, not a random headcount - each bat only
+        # ever fires bullets in its own color (Enemy.update), so 4 colors
+        # spawned means all 4 gun/shield colors are actually needed to clear
+        for color in config.SHIELD_COLORS:
             x = random.uniform(100, config.WIN_WIDTH - 150)
             y = random.uniform(150, config.WIN_HEIGHT - 150)
-            self.enemies.append(Enemy(x, y, self.batch, self.entity_group))
+            self.enemies.append(Enemy(x, y, color, self.batch, self.entity_group))
         self.hint_label.text = (
-            "P1: F for shield, sing to color it | "
-            "P2: C for gun, click hud buttons for modes, click enemies to shoot"
+            "P1: F for shield, pinch hud buttons then sing to color/size it | "
+            "P2: L for gun, pinch hud button then P1 sings its color, click enemies to shoot"
         )
 
     def _spawn_exit_gate(self):
@@ -197,6 +199,17 @@ class DungeonState:
             if not bullet.alive:
                 continue
 
+            # the tilemap's real walls (dungeon.tmx's "blocks" layers, same
+            # ones player movement already respects) - bullets used to only
+            # know about the two hardcoded obstacle rects below and flew
+            # straight through actual stone walls
+            box_size = bullet.radius * 2
+            if not self.tilemap.is_walkable(
+                bullet.x - bullet.radius, bullet.y - bullet.radius, box_size, box_size
+            ):
+                bullet.destroy()
+                continue
+
             for obstacle in self.obstacles:
                 if bullet.hits_rect(obstacle.x, obstacle.y, obstacle.width):
                     bullet.destroy()
@@ -246,7 +259,7 @@ class DungeonState:
         # TODO: replace with real "player died" condition
         elif symbol == key.O:
             self.manager.set_state("end", won=False)
-        elif symbol == key.C:
+        elif symbol == key.L:
             self.player2.handle_key_press(symbol, self.gun)
         else:
             self.player1.handle_key_press(symbol, interactables=(self.lever,))
