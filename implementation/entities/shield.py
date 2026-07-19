@@ -1,7 +1,9 @@
 # here comes all logic for the shield since it can do 2 things now: get
 # bigger/smaller (P1 screams, 3s window) and change color (P1 holds a pitch
 # steady, 2s) - duration/breaking got cut entirely, once it's up it just
-# stays up until F closes it again
+# stays up until F closes it again. both flows are: P2 picks a mode (hud
+# button) -> P2 pinches the shield to actually start listening -> P1
+# screams/sings -> it locks -> P2 can now pinch+drag it anywhere
 import pyglet
 
 import config
@@ -116,9 +118,12 @@ class PitchColorLock:
 class Shield:
     # a little tornado sprite, nonexistent on screen until P1 actually
     # raises it (F), stays up until F closes it again - no more duration or
-    # breaking. once up, P2 can pinch/click + drag it around like the
-    # overworld crystal it spawns at P1's position but doesn't keep
-    # following P1 after that, P2 owns its position from there
+    # breaking. flow per mode, same shape for both: P2 picks a mode via the
+    # hud button (set_mode) -> P2 pinches the shield itself to actually
+    # start listening (on_mouse_press, same "pinch the object to start" idiom
+    # gate/chest/gem already use) -> P1 screams/sings -> it locks -> *now*
+    # pinching the shield grabs it for a drag instead of starting a new
+    # listen, so it can be repositioned anywhere once its current value is set
     def __init__(self, batch, group):
         self.x = 0
         self.y = 0
@@ -128,6 +133,7 @@ class Shield:
         self.mode = None
         self.color = config.SHIELD_COLORS[0]
         self._folder = color_folder(self.color)
+        self.listening = False
         self._grabbed = False
 
         self._color_pick = PitchColorLock()
@@ -146,15 +152,24 @@ class Shield:
     def set_mode(self, mode):
         # hud.py calls this every time P2 clicks/pinches a mode button,
         # including re-picking the same one - always (re)starts a fresh
-        # listening/growing window for that mode. "to change color/size, P2
-        # pinches the button again" is exactly this call firing a second time
+        # window for that mode. resets listening too - P2 has to pinch the
+        # shield again to actually kick the new window off, picking a mode
+        # alone doesn't start P1's scream/sing counting
         self.mode = mode
+        self.listening = False
         if mode == MODE_COLOR:
             self._color_pick.reset()
         elif mode == MODE_SIZE:
             self._size_timer = 0.0
             self._size_peak = config.SHIELD_MIN_SIZE
             self._size_locked = False
+
+    def _mode_locked(self):
+        if self.mode == MODE_COLOR:
+            return self._color_pick.locked
+        if self.mode == MODE_SIZE:
+            return self._size_locked
+        return False
 
     def contains(self, x, y):
         half = self.size / 2
@@ -163,13 +178,15 @@ class Shield:
         )
 
     def on_mouse_press(self, x, y):
-        # P2 mechanic: click/pinch the raised shield to grab it, same deal
-        # as Pushable - only takes effect while it's actually up
-        if not self.active:
+        if not self.active or not self.contains(x, y):
             return False
-        if self.contains(x, y):
+        if self._mode_locked():
+            # current value's already set - pinching it now means "grab it
+            # to move it" instead of "start listening again"
             self._grabbed = True
-        return self._grabbed
+        elif self.mode is not None:
+            self.listening = True
+        return True
 
     def on_mouse_drag(self, dx, dy):
         if not self._grabbed:
@@ -189,12 +206,10 @@ class Shield:
         return self.active and colors_match(color, self.color)
 
     def activate(self, x, y):
-        # (re)raising it always spawns fresh beside P1 - P2 has to grab it
-        # again to move it off that spot, it doesn't remember where it was
-        # dropped last time. clamped same as a drag, in case the "beside P1"
-        # spot lands past the edge of the screen. color/size/mode all carry
-        # over from before though (only position resets) - same as before
-        # duration existed at all
+        # (re)raising it always spawns fresh beside P1's current spot.
+        # clamped in case that spot lands past the edge of the screen.
+        # color/size/mode all carry over from before though (only position
+        # resets) - same as before duration existed at all
         half = self.size / 2
         self.x = min(max(x, half), config.WIN_WIDTH - half)
         self.y = min(max(y, half), config.WIN_HEIGHT - half)
@@ -239,6 +254,8 @@ class Shield:
             self._update_size(dt)
 
     def _update_color(self, dt):
+        if not self.listening:
+            return  # P2 hasn't pinched the shield to start this window yet
         if not self._color_pick.update(audio_input.current_frequency, dt):
             return
         self.color = self._color_pick.color
@@ -250,6 +267,8 @@ class Shield:
             self.sprite.image = _tornado_idle_animation(folder)
 
     def _update_size(self, dt):
+        if not self.listening:
+            return  # P2 hasn't pinched the shield to start this window yet
         if self._size_locked:
             return
 
