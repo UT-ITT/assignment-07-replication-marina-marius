@@ -34,10 +34,8 @@ ENEMY_SPEED = 120
 ENEMY_HITBOX_SIZE = (48, 48)
 ENEMY_CONTACT_DAMAGE = 10
 # shield
-SHIELD_MAX_HEALTH = 50
 SHIELD_MIN_SIZE = 32
 SHIELD_MAX_SIZE = 96
-SHIELD_DEFAULT_DURATION = 3.0
 SHIELD_COLORS = [
     (220, 60, 60, 255),
     (60, 140, 220, 255),
@@ -53,10 +51,12 @@ SHIELD_COLOR_NAMES = ["Red", "Blue", "Green", "Yellow"]
 PITCH_SILENCE_COLOR = (120, 120, 120)
 # scream this loud (audio_input.current_volume) and you've maxed out the size mechanic
 SHIELD_MAX_VOLUME = 0.5
-# tune-mechanic knobs, nudge these while playtesting the pitch ladder
-SHIELD_TUNE_BOOST = 2.0
-SHIELD_TUNE_PENALTY = 1.5
-SHIELD_TUNE_SEQUENCE_TIMEOUT = 2.0
+# size mode: P1 has this long to scream, whatever the loudest moment reached
+# is becomes the locked size once it runs out - see Shield._update_size
+SHIELD_SIZE_GROW_TIME = 3.0
+# color mode (shield and gun both): hold the same pitch bucket steady this
+# long and whatever color that bucket maps to locks in - see PitchColorLock
+PITCH_LOCK_HOLD_TIME = 2.0
 
 # melody-gate knobs (idea.md's "final gate": sing a short note sequence
 # instead of holding one pitch) - length is randomized per gate between
@@ -68,11 +68,10 @@ MELODY_LENGTH_MAX = 4
 MELODY_NOTE_TIMEOUT = 2.0
 
 # dungeon combat
-ENEMY_COUNT_MIN = 3
-ENEMY_COUNT_MAX = 3
 ENEMY_WANDER_RADIUS = 120
 ENEMY_FIRE_INTERVAL = 2.0
-BULLET_SPEED = 260
+PLAYER_BULLET_SPEED = 200  # P2's own shots - faster than what's coming back at them
+ENEMY_BULLET_SPEED = 100
 BULLET_RADIUS = 8
 PROJECTILE_DISPLAY_SIZE = 32  # sprites are 64x64 source, scaled down to on-screen size
 OBSTACLE_SIZE = 40
