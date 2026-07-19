@@ -50,28 +50,22 @@ class Player2(GridActor):
         if symbol == key.L:
             gun.toggle()
 
-    def try_shoot(self, x, y, enemies, gun, batch, group):
-        # same "click on it" targeting as try_interact_at, just aimed at
-        # enemies instead of world props, and gated behind the gun being drawn
+    def try_shoot(self, x, y, gun, batch, group):
+        # free-aim: fires straight at wherever P2 clicked/pinched, not just
+        # when that spot happens to land exactly on an enemy - the bullet
+        # itself (state_dungeon.py's _resolve_bullets) is what decides what
+        # it actually hits along the way, same as an enemy's own shots
         if not gun.active:
             return None
 
-        for enemy in enemies:
-            if not enemy.alive:
-                continue
-            if (
-                enemy.x <= x <= enemy.x + enemy.size
-                and enemy.y <= y <= enemy.y + enemy.size
-            ):
-                return Projectile(
-                    self.x + self.size / 2,
-                    self.y + self.size / 2,
-                    enemy.x + enemy.size / 2,
-                    enemy.y + enemy.size / 2,
-                    gun.color,
-                    batch,
-                    group,
-                    owner="player2",
-                    speed=config.PLAYER_BULLET_SPEED,
-                )
-        return None
+        return Projectile(
+            self.x + self.size / 2,
+            self.y + self.size / 2,
+            x,
+            y,
+            gun.color,
+            batch,
+            group,
+            owner="player2",
+            speed=config.PLAYER_BULLET_SPEED,
+        )

@@ -5,6 +5,8 @@
 # in-flight animation, 006-010 is a one-shot explosion played on impact
 # folder picked via shield.py color_folder(), same bucket index the
 # shield/gate/gun already use for "which color is this"
+import math
+
 import pyglet
 
 import config
@@ -82,6 +84,13 @@ class Projectile:
         )
         self.sprite.scale = config.PROJECTILE_DISPLAY_SIZE / self.sprite.width
         self.sprite.push_handlers(on_animation_end=self._on_explosion_end)
+
+        # art faces along +x (right) by default. pyglet's sprite.rotation is
+        # clockwise degrees in this same y-up world space, so to make the
+        # sprite's default-right tip point at (vx, vy) instead, negate the
+        # standard (counter-clockwise) math angle atan2(vy, vx) - a bullet
+        # never turns mid-flight, so this is set once and left alone
+        self.sprite.rotation = -math.degrees(math.atan2(self.vy, self.vx))
 
     def update(self, dt):
         if not self.alive:
