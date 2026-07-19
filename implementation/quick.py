@@ -1,13 +1,12 @@
 # quick.py - same bootstrap as main.py, minus the start_menu -> overworld ->
 # dungeon walk normally needed to reach whichever screen you're actually
 # testing. real audio/gesture input still gets started (pitch/pinch testing
-# needs the real thing, not a stub), just skips straight to --state once
-# it's up.
+# needs the real thing, not a stub), just skips straight to TARGET_STATE
+# once it's up.
 #
-# usage: python quick.py            (jumps to the treasure chamber)
-#        python quick.py dungeon    (jumps to any registered state by name)
+# usage: comment out whichever state is currently active below and
+# uncomment the one you actually want, then just run: python quick.py
 import time
-import argparse
 
 from input import audio_input
 from input import gesture_tracking
@@ -21,6 +20,13 @@ from states.state_overworld import OverworldState
 from states.state_dungeon import DungeonState
 from states.state_treasure import TreasureState
 from states.state_end import EndState
+
+# --- pick which state to jump straight into: uncomment exactly one -------
+# TARGET_STATE = "start_menu"
+# TARGET_STATE = "overworld"
+# TARGET_STATE = "dungeon"
+TARGET_STATE = "treasure"
+# TARGET_STATE = "end"
 
 window = pyglet.window.Window(config.WIN_WIDTH, config.WIN_HEIGHT, config.WIN_TITLE)
 manager = StateManager(window)
