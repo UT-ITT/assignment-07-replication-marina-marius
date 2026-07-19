@@ -41,12 +41,18 @@ class DungeonState:
         self.gun = Gun()
         self.gun_hud = GunHud(self.gun, self.batch, self.ui_group, x=20, y=30)
 
+        # far-left edge of the map, on its vertical midline - the
+        # gem/exit-gate/eventual diamond all sit on the opposite (right)
+        # side, so this is the natural "start" end of the room. (40, 360)/
+        # (104, 360) confirmed walkable against the real "blocks" tiles,
+        # not guessed - the old (200, 120)/(260, 120) spawn had player1
+        # sitting directly on a walls tile
         self.player1 = Player1(
-            200, 120, self.batch, self.entity_group, shield=self.shield,
+            40, 360, self.batch, self.entity_group, shield=self.shield,
             collision_scale=self.tilemap.scale,
         )
         self.player2 = Player2(
-            260, 120, self.batch, self.entity_group, collision_scale=self.tilemap.scale
+            104, 360, self.batch, self.entity_group, collision_scale=self.tilemap.scale
         )
 
         self.hearts1 = HeartsDisplay(20, config.WIN_HEIGHT - 60, self.batch, self.ui_group)
@@ -62,7 +68,7 @@ class DungeonState:
         # a couple of static blocks bullets can crash into instead of
         # reaching their target - also nudged off the walls onto the open
         # floor, same reason as the lever above
-        obstacle_positions = [(620, 136), (596, 440)]
+        obstacle_positions = [(620, 136), (596, 392)]
         self.obstacles = [
             pyglet.shapes.Rectangle(
                 x, y, config.OBSTACLE_SIZE, config.OBSTACLE_SIZE,
@@ -166,9 +172,9 @@ class DungeonState:
             # callback (_start_combat) sets self.gate = None, so re-reading
             # self.gate for the second call would crash once a pair
             # completes on the same frame
-            if gate.try_enter(self.player1, self.player1.x, self.player1.y):
+            if gate.try_enter(self.player1, *self.player1.collision_box()):
                 self.player1.sprite.visible = False
-            if gate.try_enter(self.player2, self.player2.x, self.player2.y):
+            if gate.try_enter(self.player2, *self.player2.collision_box()):
                 self.player2.sprite.visible = False
 
         if self.phase == "combat":
@@ -281,7 +287,7 @@ class DungeonState:
 
         if self.phase == "combat":
             bullet = self.player2.try_shoot(
-                x, y, self.enemies, self.gun, self.batch, self.entity_group,
+                x, y, self.gun, self.batch, self.entity_group,
             )
             if bullet is not None:
                 self.bullets.append(bullet)
