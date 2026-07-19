@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="50" height="28" tilewidth="16" tileheight="16" infinite="0" nextlayerid="19" nextobjectid="1">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="50" height="28" tilewidth="16" tileheight="16" infinite="0" nextlayerid="22" nextobjectid="1">
  <tileset firstgid="1" name="Exterior" tilewidth="16" tileheight="16" tilecount="304" columns="16">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Exterior.png" width="256" height="304"/>
+  <image source="Exterior.png" width="256" height="304"/>
  </tileset>
  <tileset firstgid="305" name="Walls_street" tilewidth="16" tileheight="16" tilecount="378" columns="21">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Walls_street.png" width="336" height="288"/>
+  <image source="Walls_street.png" width="336" height="288"/>
  </tileset>
  <tileset firstgid="683" name="Decorative_cracks" tilewidth="16" tileheight="16" tilecount="285" columns="19">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Decorative_cracks.png" width="304" height="240"/>
+  <image source="Decorative_cracks.png" width="304" height="240"/>
  </tileset>
  <tileset firstgid="968" name="Dragon_wing_animation" tilewidth="16" tileheight="16" tilecount="252" columns="36">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Dragon_wing_animation.png" width="576" height="112"/>
+  <image source="Dragon_wing_animation.png" width="576" height="112"/>
   <tile id="1">
    <animation>
     <frame tileid="1" duration="150"/>
@@ -429,10 +429,10 @@
   </tile>
  </tileset>
  <tileset firstgid="1220" name="Dragon_body" tilewidth="16" tileheight="16" tilecount="24" columns="6">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Dragon_body.png" width="96" height="64"/>
+  <image source="Dragon_body.png" width="96" height="64"/>
  </tileset>
  <tileset firstgid="1244" name="Dragon_head" tilewidth="16" tileheight="16" tilecount="120" columns="30">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Dragon_head.png" width="480" height="64"/>
+  <image source="Dragon_head.png" width="480" height="64"/>
   <tile id="2">
    <animation>
     <frame tileid="2" duration="150"/>
@@ -715,7 +715,7 @@
   </tile>
  </tileset>
  <tileset firstgid="1364" name="Dragon_tail" tilewidth="16" tileheight="16" tilecount="1225" columns="35">
-  <image source="../../../../../Downloads/craftpix-net-477438-free-chapel-pixel-art-top-down-asset-pack/Tiled_files/Dragon_tail.png" width="560" height="560"/>
+  <image source="Dragon_tail.png" width="560" height="560"/>
   <tile id="1">
    <animation>
     <frame tileid="1" duration="150"/>
@@ -1809,6 +1809,9 @@
    </animation>
   </tile>
  </tileset>
+ <tileset firstgid="2589" name="Walls_floor" tilewidth="16" tileheight="16" tilecount="176" columns="11">
+  <image source="Walls_floor.png" width="176" height="256"/>
+ </tileset>
  <layer id="7" name="Floor" width="50" height="28">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -2199,7 +2202,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="12" name="Wings" width="50" height="28">
+ <layer id="19" name="wingL" width="50" height="28">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -2207,13 +2210,13 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484621,2147484620,2147484619,2147484618,2147484617,2147484616,968,969,970,971,972,973,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484657,2147484656,2147484655,2147484654,2147484653,2147484652,1004,1005,1006,1007,1008,1009,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484693,2147484692,2147484691,2147484690,2147484689,2147484688,1040,1041,1042,1043,1044,1045,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484729,2147484728,2147484727,2147484726,2147484725,2147484724,1076,1077,1078,1079,1080,1081,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484765,2147484764,2147484763,2147484762,2147484761,2147484760,1112,1113,1114,1115,1116,1117,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484801,2147484800,2147484799,2147484798,2147484797,2147484796,1148,1149,1150,1151,1152,1153,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147484837,2147484836,2147484835,2147484834,2147484833,2147484832,1184,1185,1186,1187,1188,1189,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,968,969,970,971,972,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1004,1005,1006,1007,1008,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1040,1041,1042,1043,1044,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1076,1077,1078,1079,1080,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1112,1113,1114,1115,1116,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1148,1149,1150,1151,1152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1184,1185,1186,1187,1188,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
