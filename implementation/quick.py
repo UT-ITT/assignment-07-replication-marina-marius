@@ -1,9 +1,4 @@
-# quick.py - same bootstrap as main.py, minus the start_menu -> overworld ->
-# dungeon walk normally needed to reach whichever screen you're actually
-# testing. real audio/gesture input still gets started (pitch/pinch testing
-# needs the real thing, not a stub), just skips straight to TARGET_STATE
-# once it's up.
-#
+# quick.py
 # usage: comment out whichever state is currently active below and
 # uncomment the one you actually want, then just run: python quick.py
 import time
@@ -21,7 +16,7 @@ from states.state_dungeon import DungeonState
 from states.state_treasure import TreasureState
 from states.state_end import EndState
 
-# --- pick which state to jump straight into: uncomment exactly one -------
+# pick which state to jump straight into: uncomment others
 # TARGET_STATE = "start_menu"
 # TARGET_STATE = "overworld"
 # TARGET_STATE = "dungeon"
@@ -78,14 +73,6 @@ def update(dt):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "state", nargs="?", default="treasure",
-        choices=["start_menu", "overworld", "dungeon", "treasure", "end"],
-        help="which state to jump straight into (default: treasure)",
-    )
-    args = parser.parse_args()
-
     print("starting audio stream")
     audio_input.start_audio_stream()
 
@@ -100,11 +87,11 @@ def main():
 
     music.play("assets/sound/8BitSample_Cut.mp3")
 
-    print(f"\njumping straight to '{args.state}'")
+    print(f"\njumping straight to '{TARGET_STATE}'")
     print("press ctrl+c to exit\n")
 
     try:
-        manager.set_state(args.state)
+        manager.set_state(TARGET_STATE)
         pyglet.clock.schedule_interval(update, 1 / config.FPS)
         pyglet.app.run()
     except KeyboardInterrupt:
