@@ -60,9 +60,7 @@ class OverworldState:
         self._gems_done_notified = False
 
         # mechanic A: P1 sings its color to unlock it, then both walk in
-        # but it can't even be woken up until all 4 gems are in place.
-        # 1.5x the original 80px size, recentered on the same spot so it
-        # grows in place instead of shifting toward one corner
+        # but it can't even be woken up until all 4 gems are in place
         self.gate = Gate(
             822, 240, 120,
             self.batch, self.entity_group, on_unlock=self._enter_dungeon,
@@ -125,12 +123,11 @@ class OverworldState:
         )
         self.gate.show_hint(gems_done and gate_near)
 
-        # gate unlocked color alone doesn't open it anymore, both P1 and
-        # P2 have to physically walk in, whoevers first just disappears
+        # P1 and P2 have to physically walk in, whoevers first just disappears
         # until the other catches up (see Gate.try_enter)
-        if self.gate.try_enter(self.player1, *self.player1.collision_box()):
+        if self.gate.try_enter(self.player1, *self.player1.collision_box()): # type: ignore
             self.player1.sprite.visible = False
-        if self.gate.try_enter(self.player2, *self.player2.collision_box()):
+        if self.gate.try_enter(self.player2, *self.player2.collision_box()): # type: ignore
             self.player2.sprite.visible = False
 
     def on_draw(self):

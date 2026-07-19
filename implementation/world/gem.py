@@ -2,14 +2,7 @@
 # it into place same two tricks world/gate.py and Chest already know,
 # just on an animated object instead of a flat color swap. used solo as a
 # single "color it to trigger something"
-#
-# sprites: assets/gem/<basic|red|blue|green|yellow>/tile000-007.png, all
-# five folders are the same 8-frame loop, just recolored the animation
-# never actually stops, it's always looping, "coloring the gem" means
-# swapping which folder's loop is currently playing: basic while idle or
-# silent, live color-folder while P1's actively singing (matching
-# color_folder() everywhere else uses), the locked target color forever
-# once it's held long enough
+
 import random
 
 import pyglet
@@ -44,11 +37,7 @@ class Gem(Interactable):
     def __init__(self, x, y, size, batch, group, on_solved=None, target_color=None,
                  target_slot=None, stats=None,
                  hint="P2: click/pinch to wake it up, then P1: sing its color"):
-        # not calling Interactable.__init__ - gems render via a sprite, not
-        # the base rectangle, same deal as Chest/Gate. contains() is
-        # overridden below (gems are positioned by center, not bottom-left
-        # like the base class assumes), in_range()/show_hint() still come
-        # for free, they only touch x/y/hint_label
+
         self.x = x
         self.y = y
         self.size = size
@@ -81,9 +70,7 @@ class Gem(Interactable):
 
         self.slot_marker = None
         if target_slot is not None:
-            # a Box outline (not BorderedRectangle - that shares one alpha
-            # between fill and border, so a transparent fill zeroes the
-            # border out too) showing where this gem actually belongs
+            # a Box outline showing where this gem actually belongs
             self.slot_marker = pyglet.shapes.Box(
                 target_slot[0] - size / 2, target_slot[1] - size / 2, size, size,
                 thickness=3, color=self.target_color[:3], batch=batch, group=group,
@@ -125,7 +112,7 @@ class Gem(Interactable):
         self._check_solved()
 
     def _check_solved(self):
-        slot_x, slot_y = self.target_slot
+        slot_x, slot_y = self.target_slot  # type: ignore
         off_x, off_y = abs(self.x - slot_x), abs(self.y - slot_y)
         if off_x > SLOT_TOLERANCE or off_y > SLOT_TOLERANCE:
             print(

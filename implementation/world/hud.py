@@ -16,10 +16,12 @@ MODE_BUTTONS = [
     ("size", "Scream -> Size (3s)"),
 ]
 
-
 class ShieldHud:
     # pops up whenever the shield is out (F key), P2 pinches/clicks a button
-    # here to decide which of the two mechanics P1 voice controls right now
+    # here to decide which of the two mechanics P1 voice controls right now.
+    # either button can be pinched again any time, even after its mode's
+    # already locked once, that's how P2 renews it (Shield.set_mode resets
+    # just that mode's done flag, dragging pauses again until it re-locks)
     def __init__(self, shield, batch, group):
         self.shield = shield
         self.buttons = {}
@@ -44,9 +46,7 @@ class ShieldHud:
             button.label.visible = visible
 
     def sync_with_shield(self):
-        # shows/hides with the shield, lights up the active mode and repaints
-        # the hover glow fresh every frame since set_active() would otherwise
-        # just paint right over it
+        # shows/hides with the shield
         self.set_visible(self.shield.active)
         hovered_mode = (
             self._hit_mode(*self._hover_pos)
@@ -112,7 +112,7 @@ class GunHud:
 
 
 class HeartsDisplay:
-    # three little pips per player, dimmed one at a time as hits land -
+    # three little pips per player, dimmed one at a time as hits land
     # stand-ins until actual heart sprites exist
     def __init__(self, x, y, batch, group, count=config.PLAYER_HEART_COUNT):
         self.count = count
@@ -132,9 +132,7 @@ class HeartsDisplay:
 
 
 class PitchLegend:
-    # cheat sheet for "which pitch makes which color" nobody can guess
-    # frequency_to_color()'s bucketing just by vibes, so spell it out:
-    # swatches run left to right from the lowest note in range to the highest
+    # cheat sheet for "which pitch makes which color"
     def __init__(self, x, y, batch, group, swatch_size=26, gap=6):
         last_index = len(config.SHIELD_COLORS) - 1
         right_edge = x + last_index * (swatch_size + gap) + swatch_size

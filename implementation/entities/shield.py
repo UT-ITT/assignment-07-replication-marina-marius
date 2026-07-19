@@ -1,9 +1,13 @@
 # here comes all logic for the shield since it can do 2 things now: get
 # bigger/smaller (P1 screams, 3s window) and change color (P1 holds a pitch
 # steady, 2s) - duration/breaking got cut entirely, once it's up it just
-# stays up until F closes it again. both flows are: P2 picks a mode (hud
-# button) -> P2 pinches the shield to actually start listening -> P1
-# screams/sings -> it locks -> P2 can now pinch+drag it anywhere
+# stays up until F closes it again. both flows are one-shot: P2 picks a mode
+# (hud button) -> P2 pinches the shield to actually start listening -> P1
+# screams/sings -> it locks -> that button goes inactive, its job is done.
+# only once *both* size and color have locked at least once does pinching
+# the shield start dragging it instead of doing nothing - no more
+# dragging/redoing either one halfway through, and no more re-arming a mode
+# that's already locked in
 import pyglet
 
 import config
@@ -121,9 +125,11 @@ class Shield:
     # breaking. flow per mode, same shape for both: P2 picks a mode via the
     # hud button (set_mode) -> P2 pinches the shield itself to actually
     # start listening (on_mouse_press, same "pinch the object to start" idiom
-    # gate/chest/gem already use) -> P1 screams/sings -> it locks -> *now*
-    # pinching the shield grabs it for a drag instead of starting a new
-    # listen, so it can be repositioned anywhere once its current value is set
+    # gate/chest/gem already use) -> P1 screams/sings -> it locks -> once
+    # *both* modes are locked, pinching the shield grabs it for a drag
+    # instead. either button can be pinched again at any time (renews that
+    # one mode's window, same as picking it fresh) - doing so un-grabs
+    # dragging again until that mode re-locks, same as the very first time
     def __init__(self, batch, group):
         self.x = 0
         self.y = 0
@@ -135,6 +141,12 @@ class Shield:
         self._folder = color_folder(self.color)
         self.listening = False
         self._grabbed = False
+
+        # True while that mode's current value is locked in - False again
+        # the moment set_mode() re-arms it, back to True once it re-locks.
+        # both together gate dragging, see _both_done
+        self._size_done = False
+        self._color_done = False
 
         self._color_pick = PitchColorLock()
         # size mode: how long P1's been screaming this window, and the
@@ -151,18 +163,39 @@ class Shield:
 
     def set_mode(self, mode):
         # hud.py calls this every time P2 clicks/pinches a mode button,
-        # including re-picking the same one - always (re)starts a fresh
-        # window for that mode. resets listening too - P2 has to pinch the
+        # including re-picking a mode that's already locked - that's the
+        # "renew" path, P2 can come back and redo either one whenever they
+        # want. un-does that mode's "done" flag (so dragging pauses again
+        # until it re-locks) and resets listening - P2 has to pinch the
         # shield again to actually kick the new window off, picking a mode
         # alone doesn't start P1's scream/sing counting
         self.mode = mode
         self.listening = False
         if mode == MODE_COLOR:
             self._color_pick.reset()
+            self._color_done = False
         elif mode == MODE_SIZE:
             self._size_timer = 0.0
             self._size_peak = config.SHIELD_MIN_SIZE
             self._size_locked = False
+            self._size_done = False
+
+    def mode_done(self, mode):
+        # hud.py can use this to show which buttons currently hold a locked
+        # value vs. one mid-redo
+        if mode == MODE_COLOR:
+            return self._color_done
+        if mode == MODE_SIZE:
+            return self._size_done
+        return False
+
+    def _both_done(self):
+        # dragging is gated on *both* modes currently being locked, not just
+        # whichever one is currently selected - see on_mouse_press. renewing
+        # either one (set_mode) clears its own done flag until it re-locks,
+        # so this naturally goes False the instant P2 starts a redo and
+        # True again once it finishes
+        return self._size_done and self._color_done
 
     def _mode_locked(self):
         if self.mode == MODE_COLOR:
@@ -180,13 +213,28 @@ class Shield:
     def on_mouse_press(self, x, y):
         if not self.active or not self.contains(x, y):
             return False
-        if self._mode_locked():
-            # current value's already set - pinching it now means "grab it
-            # to move it" instead of "start listening again"
+        if self._both_done():
+            # both modes locked at least once - pinching it now always
+            # means "grab it to move it", never "start listening again"
             self._grabbed = True
-        elif self.mode is not None:
+        elif not self._mode_locked() and self.mode is not None:
             self.listening = True
+        # else: current mode's already locked but the other one isn't done
+        # yet - nothing to do until it is, no premature dragging and no
+        # re-arming a mode that's already had its shot
         return True
+
+    def note_still_pressed(self, x, y):
+        # a held pinch very naturally spans the whole "pinch the shield to
+        # start listening -> P1 screams/sings -> locks" sequence without
+        # ever letting go in between - there's no second on_mouse_press in
+        # that case to flip _grabbed, so a still-held pointer sitting on
+        # the shield the instant *both* modes have locked (whichever one
+        # finishes second) needs to grab it right then instead of silently
+        # requiring a release-and-repress. state_dungeon.py calls this every
+        # frame the button/pinch is down - same fix as Chest.note_still_pressed
+        if self._both_done() and not self._grabbed and self.contains(x, y):
+            self._grabbed = True
 
     def on_mouse_drag(self, dx, dy):
         if not self._grabbed:
@@ -265,6 +313,8 @@ class Shield:
             # re-assigning it every frame would restart the idle loop nonstop
             self._folder = folder
             self.sprite.image = _tornado_idle_animation(folder)
+        if self._color_pick.locked:
+            self._color_done = True
 
     def _update_size(self, dt):
         if not self.listening:
@@ -286,6 +336,7 @@ class Shield:
 
         if self._size_timer >= config.SHIELD_SIZE_GROW_TIME:
             self._size_locked = True
+            self._size_done = True
             self.size = self._size_peak
         else:
             self.size = live_size

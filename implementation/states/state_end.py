@@ -18,9 +18,6 @@ class EndState:
         self.bg_group = pyglet.graphics.Group(order=0)
         self.ui_group = pyglet.graphics.Group(order=1)
 
-        # no player movement here either - same tilemap rendering (incl.
-        # animated tiles) as every other room, purely a backdrop for the
-        # win/lose title + stats + restart button
         self.tilemap = TileMap(
             "assets/chamber/endscreen.tmx", self.batch, self.bg_group
         )
@@ -28,7 +25,7 @@ class EndState:
 
         self.title_label = pyglet.text.Label(
             "",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 120,
+            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT - 100,
             anchor_x="center", anchor_y="center",
             font_name=config.FONT_NAME, font_size=32,
             batch=self.batch, group=self.ui_group,
@@ -37,15 +34,12 @@ class EndState:
         # TODO: swap for real end-game metrics UI once we have one
         self.stats_label = pyglet.text.Label(
             "",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 60,
+            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT - 160,
             anchor_x="center", anchor_y="center",
             font_name=config.FONT_NAME, font_size=16, color=config.TEXT_COLOR,
             batch=self.batch, group=self.ui_group,
         )
 
-        # pushed well down from center instead of sitting on it - reads as
-        # its own "next step" area under the title/stats, not competing
-        # with them for the middle of the screen
         self.restart_button = Button(
             x=config.WIN_WIDTH // 2 - 100,
             y=120,

@@ -16,7 +16,6 @@ class GameStats:
 
     def start_run(self):
         # called the moment a run actually begins (start menus 2nd click),
-        # not on __init__, so refreshing the app doesn't already have a clock running
         self.reset()
         self.run_start_time = time.time()
 
@@ -26,7 +25,6 @@ class GameStats:
     def record_pitch_sample(self, matched):
         # one sample per frame P1 is singing during an actual color-match
         # check (start button, any Gate, any Chest) => Shield/Gun don't have
-        # a fixed target to be "right" or "wrong" against, so they don't call this
         self.pitch_attempts += 1
         if matched:
             self.pitch_hits += 1

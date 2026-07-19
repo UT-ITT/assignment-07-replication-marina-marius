@@ -11,7 +11,17 @@ from pytmx.util_pyglet import load_pyglet
 
 class TileMap:
 
-    def __init__(self, tmx_path, batch, group):
+    def __init__(self, tmx_path, batch, group, wall_collision_shrink=1.0):
+        # a blocked tile used to count as solid across its *entire* 16x16
+        # cell fine for a tileset where the wall art actually fills the
+        # tile, way too generous for one where the drawn wall is a much
+        # thinner line/border within it (dungeon.tmx's walls_top/walls/
+        # walls_back/walls_outside), which read as "the hallway is way
+        # narrower than it looks". 1.0 keeps the old full-cell behavior
+        # (overworld/treasure never asked for anything smaller), anything
+        # below that insets the blocking rect within each tile, centered -
+        # see is_walkable
+        self.wall_collision_shrink = wall_collision_shrink
         self.data = load_pyglet(tmx_path)
         self.tile_width = self.data.tilewidth
         self.tile_height = self.data.tileheight
@@ -24,29 +34,11 @@ class TileMap:
         # without having to reload/rebuild anything
         self._native_positions = []
 
-        # (tiled_x, tiled_y) Tiled's own row-from-top tile coords, same ones
-        # layer.iter_data() already hands us - for every tile sitting on a
-        # layer whose custom "blocks" property (set per-layer in Tiled, not
-        # per tile way less tedious to tag by hand than every individual
-        # tile graphic) is checked true
         self._blocked_tiles = set()
 
-        # gid -> pyglet.image.Animation, built the first time that gid is
-        # seen and shared by every other placed tile using it - a map can
-        # easily place the same animated water/fire/trap tile hundreds of
-        # times, one Animation object per gid beats one per placement
+        # gid -> pyglet.image.Animation, built the first time that gis is seen
         self._animation_cache = {}
 
-        # every layer used to render into the one shared `group` the caller
-        # passed in, with nothing distinguishing which layer a sprite came
-        # from - fine as long as no two layers ever shared a texture, but
-        # dungeon.tmx's Floor/earth_floor/walls all pull from the same
-        # tileset image, so pyglet's internal per-texture batching was free
-        # to interleave their draw calls however it liked instead of
-        # respecting Tiled's actual layer order. one child Group per tile
-        # layer, ordered to match Tiled's own top-to-bottom layer list,
-        # fixes that - tiles within a single layer still don't need their
-        # own ordering (nothing on the same layer ever overlaps itself)
         layer_index = 0
         for layer in self.data.visible_layers:
             if not hasattr(layer, "tiles"):
@@ -73,24 +65,12 @@ class TileMap:
                 self.sprites.append(sprite)
                 self._native_positions.append((px, py))
 
-        # fit_to() fills these in is_walkable() needs them to translate an
-        # on-screen position back into native tile space, they default to
-        # "unscaled, no offset" so is_walkable() still works even if fit_to()
-        # never gets called (e.g. a headless test building a TileMap directly).
-        # scale is public, it's how a GridActor turns its own native sprite
-        # size into a screen-space collision box that's actually sized like
-        # the character instead of the (much bigger) movement-grid tile
         self.scale = 1.0
         self._offset_x = 0.0
         self._offset_y = 0.0
 
     def _image_for_gid(self, gid):
-        # most gids are a plain static tile - pytmx already resolved and
-        # cached those images itself (self.data.images), nothing to build.
-        # a gid with a Tiled "Tile Animation Editor" sequence attached
-        # instead carries a "frames" property: a list of (gid, duration_ms)
-        # pointing at other tiles in the same tileset to cycle through -
-        # turn that into a real looping pyglet.image.Animation, once per gid
+
         if gid in self._animation_cache:
             return self._animation_cache[gid]
 
@@ -99,14 +79,14 @@ class TileMap:
         if not frames:
             return self.data.images[gid]
 
-        # Tiled stores frame duration in milliseconds, pyglet wants seconds.
-        # leaving every frame's duration a real number (never None) is what
-        # makes a pyglet Animation loop forever instead of stopping on the
-        # last frame - exactly what a background water/fire/trap tile wants
-        animation = pyglet.image.Animation([
-            pyglet.image.AnimationFrame(self.data.images[frame.gid], frame.duration / 1000)
-            for frame in frames
-        ])
+        animation = pyglet.image.Animation(  # type: ignore
+            [  
+                pyglet.image.AnimationFrame(  # type: ignore
+                    self.data.images[frame.gid], frame.duration / 1000
+                )
+                for frame in frames
+            ]
+        )
         self._animation_cache[gid] = animation
         return animation
 
@@ -129,16 +109,7 @@ class TileMap:
             sprite.y = offset_y + native_y * scale
 
     def is_walkable(self, x, y, width, height):
-        # x, y: bottom-left of the box being tested, width/height its size
-        # all in the same on-screen pixel space fit_to() placed the map
-        # sprites in. not required to be square: a GridActor checks a box
-        # sized to its actual sprite (native pixels * this map's own scale),
-        # not its much bigger 64px movement tile. players step in 64px jumps
-        # but native tiles are 16px (times whatever fit_to() scaled them by)
-        # a player box almost never lines up with a single tile, so this
-        # checks every tile cell the whole box touches, not just one corner
-        # (same "point checks miss things a real overlap wouldn't" lesson as
-        # the gate walk-in bug)
+
         left = (x - self._offset_x) / self.scale
         bottom = (y - self._offset_y) / self.scale
         right = (x + width - self._offset_x) / self.scale
@@ -149,9 +120,20 @@ class TileMap:
         row_from_bottom_min = int(bottom // self.tile_height)
         row_from_bottom_max = int((top - 1) // self.tile_height)
 
+        margin_x = self.tile_width * (1 - self.wall_collision_shrink) / 2
+        margin_y = self.tile_height * (1 - self.wall_collision_shrink) / 2
+        shrunk_width = self.tile_width * self.wall_collision_shrink
+        shrunk_height = self.tile_height * self.wall_collision_shrink
+
         for col in range(col_min, col_max + 1):
             for row_from_bottom in range(row_from_bottom_min, row_from_bottom_max + 1):
                 row = self.height_tiles - 1 - row_from_bottom
-                if (col, row) in self._blocked_tiles:
+                if (col, row) not in self._blocked_tiles:
+                    continue
+                tile_left = col * self.tile_width + margin_x
+                tile_bottom = row_from_bottom * self.tile_height + margin_y
+                tile_right = tile_left + shrunk_width
+                tile_top = tile_bottom + shrunk_height
+                if left < tile_right and right > tile_left and bottom < tile_top and top > tile_bottom:
                     return False
         return True

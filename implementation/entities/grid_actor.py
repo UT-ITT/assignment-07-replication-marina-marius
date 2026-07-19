@@ -20,6 +20,10 @@ WALK_FRAME_DURATION = 0.15
 # this only shrinks and re-centers what actually gets drawn
 PLAYER_RENDER_SCALE = 0.5
 
+# how much smaller than the rendered sprite the actual collision box is -
+# a forgiving "body" hitbox, not the full sprite bounding box
+COLLISION_SHRINK = 0.6
+
 # dx, dy (as step_towards already receives them) -> sprite folder direction name
 DIRECTION_NAMES = {
     (0, -1): "down",
@@ -71,25 +75,30 @@ class GridActor:
         self.native_width = idle_image.width
         self.native_height = idle_image.height
 
-        # tilemap collision (is_walkable) should test a box shaped like the
-        # actual character, not the much bigger 64px movement tile a
-        # GridActor built on a screen with a TileMap passes that map's own
-        # scale here so "native sprite pixels" turns into "screen pixels" the
-        # same way the map's own tiles were scaled, instead of guessing a
-        # round number. no tilemap (dungeon/treasure chamber) -> no
-        # collision_scale -> falls back to the full size x size box, which
-        # is simply never used since those screens never pass is_walkable
-        if collision_scale is None:
-            self.collision_width = size
-            self.collision_height = size
-        else:
-            self.collision_width = self.native_width * collision_scale
-            self.collision_height = self.native_height * collision_scale
-
         # rendered smaller than the movement tile (see PLAYER_RENDER_SCALE)
         # and centered within it, so the offset gets reused every step
         render_size = size * PLAYER_RENDER_SCALE
         self._render_offset = (size - render_size) / 2
+
+        # tilemap collision (is_walkable) should test a box shaped like the
+        # actual character, not the much bigger 64px movement tile - sized
+        # off render_size (what's actually drawn on screen) rather than
+        # native sprite pixels times the map's own scale factor, which used
+        # to let the hitbox end up *bigger* than the visible sprite itself
+        # on any map scaled up past ~1x (dungeon/treasure both sit around
+        # 1.6-2.0). COLLISION_SHRINK on top of that since a hitbox matching
+        # the sprite's full bounding box is still generous, not forgiving -
+        # a still noticeably-smaller box is what actually lets movement feel
+        # tight without catching on every corner. no tilemap (states with no
+        # walkable-tile screen) -> no collision_scale -> falls back to the
+        # full size x size box, which is simply never used since those
+        # screens never pass is_walkable
+        if collision_scale is None:
+            self.collision_width = size
+            self.collision_height = size
+        else:
+            self.collision_width = render_size * COLLISION_SHRINK
+            self.collision_height = render_size * COLLISION_SHRINK
 
         self.sprite = pyglet.sprite.Sprite(
             idle_image, x=x + self._render_offset, y=y + self._render_offset,

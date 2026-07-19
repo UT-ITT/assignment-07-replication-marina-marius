@@ -91,9 +91,7 @@ def update(dt):
 
     # a synthetic click from gesture_tracking only reaches on_mouse_press if
     # this window is already key/frontmost (Cocoa treats the first click on
-    # a background window as "just focus it", swallowing the click itself),
-    # so keep it activated while a hand is being tracked - the tracking
-    # thread can't safely call AppKit itself, it just raises this flag
+    # a background window as "just focus it", swallowing the click itself)
     if gesture_tracking.activation_requested:
         gesture_tracking.activation_requested = False
         window.activate()
@@ -125,19 +123,9 @@ def main():
 
     print("starting gesture tracking")
     video_id = gesture_tracking.select_camera()
-    # map the mediapipe cursor into THIS window specifically, not a hardcoded
-    # 1920x1080-at-(0,0) guess, matters as soon as the window isn't fullscreen
-    # on the primary display (see bugs.md)
+    # map the mediapipe cursor into THIS window specifically
     window_x, window_y = window.get_location()
-    # the preview is its own real OS window living in the same process as
-    # the game window - cv2.imshow() re-draws/re-shows it every single
-    # camera frame from the background tracking thread, which on macOS
-    # keeps stealing key-window status away from the game window. Cocoa
-    # treats the first click on a non-key window as "just focus it" and
-    # swallows the click itself, so with the preview constantly winning
-    # that race, every gesture click landed on an unfocused game window and
-    # never reached on_mouse_press. only worth the focus fight when
-    # actually debugging hand tracking itself
+    # the preview is its own real OS window living in the same process as the game window
     gesture_tracking.start_tracking(
         screen_width=window.width, screen_height=window.height,
         origin_x=window_x, origin_y=window_y,
@@ -156,25 +144,6 @@ def main():
         manager.set_state("start_menu")
         pyglet.clock.schedule_interval(update, 1 / config.FPS)
         pyglet.app.run()
-        """
-        while True:
-            # break if tracking was stopped (via 'q' or window close)
-            if not gesture_tracking.is_tracking:
-                break
-                
-            # get current values from modules
-            freq = audio_input.current_frequency
-            vol = audio_input.current_volume
-            
-            cx = gesture_tracking.cursor_x
-            cy = gesture_tracking.cursor_y
-            pinch = gesture_tracking.is_pinching
-            
-            # print current states
-            # print(f"audio: freq={freq:.2f} hz vol={vol:.4f} | gesture: x={cx} y={cy} pinch={pinch}")
-            
-            time.sleep(0.1)
-        """
 
     except KeyboardInterrupt:
         pass

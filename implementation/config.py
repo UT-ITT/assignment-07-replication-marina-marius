@@ -8,13 +8,7 @@ from pyglet.gl import GL_NEAREST
 pyglet.image.Texture.default_min_filter = GL_NEAREST
 pyglet.image.Texture.default_mag_filter = GL_NEAREST
 
-# registered once, here, since config.py is already imported everywhere
-# before any pyglet.text.Label gets built - every Label in the game passes
-# font_name=config.FONT_NAME so this one .ttf is what actually shows up
-# instead of whatever font pyglet's system fallback happens to pick.
-# "Play" is the family name embedded in the file itself (checked directly,
-# not guessed from the filename - Play-Regular.ttf's own name table says
-# "Play", not "Play-Regular" or "Play Regular")
+
 pyglet.font.add_file("assets/Play-Regular.ttf")
 FONT_NAME = "Play"
 
@@ -52,20 +46,14 @@ SHIELD_COLORS = [
     (80, 200, 120, 255),
     (230, 200, 60, 255),
 ]
-# names in the same order as SHIELD_COLORS, so a target color can be
-# announced in text instead of just "go find the right shade yourself"
+
 SHIELD_COLOR_NAMES = ["Red", "Blue", "Green", "Yellow"]
-# what a "sing to match this color" object shows while its listening but
-# nobody is actually singing right now, instead of just freezing on
-# whatever color happened to be sung last
+
 PITCH_SILENCE_COLOR = (120, 120, 120)
-# scream this loud (audio_input.current_volume) and you've maxed out the size mechanic
+
 SHIELD_MAX_VOLUME = 0.5
-# size mode: P1 has this long to scream, whatever the loudest moment reached
-# is becomes the locked size once it runs out - see Shield._update_size
 SHIELD_SIZE_GROW_TIME = 3.0
-# color mode (shield and gun both): hold the same pitch bucket steady this
-# long and whatever color that bucket maps to locks in - see PitchColorLock
+
 PITCH_LOCK_HOLD_TIME = 2.0
 
 # melody-gate knobs (idea.md's "final gate": sing a short note sequence

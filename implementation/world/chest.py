@@ -1,12 +1,7 @@
 # here comes the treasure chamber's chest logic: sing it the right color,
 # then drag it onto its marked spot - do both and its solved. combines the
 # same two tricks world/gate.py and Pushable already know, just on one object
-#
-# sprites: assets/chest/basic001.png is the neutral "no color yet" look,
-# assets/chest/<color>001.png is what it swaps to while P1's live pitch (or
-# the locked-in target) lands on that color same color_folder() bucket
-# gate.py/shield.py already use. assets/chest/skull/skull001-004.png is the
-# one-shot "final chest opening" animation once all 3 are solved.
+
 import pyglet
 
 import config
@@ -31,11 +26,6 @@ def _chest_color_image(folder):
 
 
 def _skull_open_animation():
-    # same corner-anchor convention as _chest_color_image/CHEST_BASIC_IMAGE -
-    # SkullChest only ever plays this one animation on its sprite (never
-    # swaps to a differently-anchored image later, unlike Gate/Chest), so
-    # this couldn't cause a mid-play jump, but a center anchor would still
-    # have quietly placed it off from the (x, y) its caller actually asked for
     return load_animation(
         "assets/chest/skull",
         SKULL_OPEN_FRAMES,
@@ -49,11 +39,12 @@ def _skull_open_animation():
 class Chest(Interactable):
     # states: locked (not its turn) -> idle (its turn, is_active) ->
     # listening (P1 singing) -> colored (locked in, draggable) -> placed
-    # (snapped into *some* slot, right or wrong - not revealed yet) ->
-    # once all 3 chests are placed, TreasureState checks the whole group at
-    # once: every chest in its own real target_slot -> solved for good,
-    # otherwise every chest scatters back to square one. a single chest
-    # never finds out right/wrong on its own - only the full group does
+    # (snapped into *some* slot, right or wrong) ->
+    # once every chest still in play this round has been placed,
+    # TreasureState checks each one against its own target_slot: right ones
+    # call lock_in() and stay put for good, wrong ones scatter back and get
+    # another go next round. a single chest never finds out right/wrong on
+    # its own, TreasureState decides once the whole *round* has placed
     def __init__(
         self,
         x,
@@ -68,9 +59,6 @@ class Chest(Interactable):
         slots_provider=None,
         hint="P2: click/pinch to wake it up, then P1: sing its color",
     ):
-        # not calling Interactable.__init__ chests render via a color-
-        # swapping sprite, not the base rectangle, so theres nothing to
-        # reuse there besides x/y/size and the hint label, built directly below
         self.x = x
         self.y = y
         self.size = size
@@ -78,11 +66,7 @@ class Chest(Interactable):
         self.target_folder = color_folder(target_color)
         self.target_slot = target_slot
         self.current_slot = None
-        # which slots are still up for grabs right now - a callable, not a
-        # plain list, since occupancy changes as sibling chests get placed
-        # one after another (a slot another chest already snapped into
-        # can't be dropped into again). defaults to "just my own slot" for
-        # any caller with no siblings to coordinate with at all
+        # which slots are still up for grabs right now
         self.slots_provider = slots_provider or (lambda: [target_slot])
         self.on_placed = on_placed
         self.stats = stats
@@ -90,9 +74,9 @@ class Chest(Interactable):
         self.is_active = False
         self.listening = False
         self.colored = False
-        self.placed = False  # sitting in a slot, awaiting the group verdict
-        self.solved = False  # permanently done - only ever set from outside,
-        # once the *whole* group of 3 has been confirmed correct
+        self.placed = False
+        self.solved = False
+        # TreasureState confirms this chest's own slot is its real target
         self.grabbed = False
         self._match_timer = 0.0
         self._default_hint = hint  # scatter() resets the hint text back to this
@@ -120,14 +104,7 @@ class Chest(Interactable):
         )
         self.hint_label.visible = False
 
-        # outline showing where this chest belongs - deliberately plain
-        # black, not target_color, so the slot itself gives no hint at all
-        # about which color goes where. that's the actual riddle: singing
-        # is the only way to find a chest's real color, position is a
-        # completely separate thing to work out. a plain Box, not
-        # BorderedRectangle: that one only supports a single alpha shared
-        # between fill and border, so a transparent fill (alpha 0) was
-        # silently zeroing the border out too, making the whole marker invisible
+        # outline showing where this chest belongs
         self.slot_marker = pyglet.shapes.Box(
             target_slot[0],
             target_slot[1],
@@ -149,23 +126,18 @@ class Chest(Interactable):
             return False
         if not self.colored:
             self.listening = True
-            # deliberately doesn't name the color - the puzzle is figuring
-            # it out from the target slot's own colored outline, not being
-            # told outright
             self.hint_label.text = "P1: sing to match its color!"
         else:
             self.grabbed = True
         return True
 
     def note_still_pressed(self, x, y):
-        # a held pinch very naturally spans the whole "click to start
-        # listening -> P1 sings -> locks" sequence without ever letting go
-        # in between - there's no second on_mouse_press in that case to
-        # flip grabbed, so a still-held pointer sitting over the chest the
-        # instant it locks needs to grab it right then instead of silently
-        # requiring a release-and-repress the player has no reason to expect.
-        # TreasureState calls this every frame the button/pinch is down
-        if self.colored and not self.grabbed and not self.placed and self.contains(x, y):
+        if (
+            self.colored
+            and not self.grabbed
+            and not self.placed
+            and self.contains(x, y)
+        ):
             self.grabbed = True
 
     def on_mouse_drag(self, dx, dy):
@@ -186,12 +158,7 @@ class Chest(Interactable):
 
     def _check_placed(self):
         # snaps into whichever *still-open* marked slot it was actually
-        # dropped near - right or wrong, doesn't matter, so the snap itself
-        # never tells you anything. a slot a sibling chest already grabbed
-        # is off the table (slots_provider only ever returns open ones).
-        # right/wrong isn't decided here at all anymore - TreasureState
-        # checks the whole group only once every chest has been placed
-        # somewhere, via on_placed
+        # dropped near
         available = self.slots_provider()
         if not available:
             return  # every slot's already taken, nothing to snap into
@@ -214,13 +181,17 @@ class Chest(Interactable):
         if self.on_placed:
             self.on_placed(self)
 
+    def lock_in(self):
+        # TreasureState calls this once it's checked that this chest is
+        # sitting in its own real target_slot and stays right here forever
+        self.solved = True
+        self.is_active = False
+        self.hint_label.visible = False
+
     def scatter(self, x, y):
         # TreasureState calls this on every chest at once when the group
-        # of 3 turns out wrong - back to a fresh (usually different) spot,
-        # uncolored, unplaced, has to be sung and placed all over again.
-        # is_active resets too - the solve order starts over from chest 0,
-        # so chest 1/2 shouldn't stay clickable just because they already
-        # had their turn earlier this round
+        # of 3 turns out wrong -> back to a fresh (usually different) spot,
+        # uncolored, unplaced, has to be sung and placed all over again
         self.is_active = False
         self.x = x
         self.y = y
@@ -275,8 +246,7 @@ class Chest(Interactable):
 class SkullChest:
     # spawns once all 3 color chests are solved: plays the opening animation
     # once (slowly this is the payoff, not a quick pop), then just sits on
-    # the last frame. on_open fires the instant that animation finishes, so
-    # whoever owns this can spawn the diamond right on cue
+    # the last frame
     def __init__(self, x, y, size, batch, group, on_open=None):
         self.on_open = on_open
         self.opened = False

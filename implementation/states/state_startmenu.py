@@ -21,10 +21,7 @@ class StartMenuState:
         self.batch = pyglet.graphics.Batch()
         self.bg_group = pyglet.graphics.Group(order=0)
         self.ui_group = pyglet.graphics.Group(order=1)
-
-        # no player movement on this screen, so no is_walkable wiring needed
-        # just the same tilemap rendering (incl. animated tiles) as every
-        # other room, purely as a backdrop for the button/title UI
+        
         self.tilemap = TileMap(
             "assets/chamber/startscreen.tmx", self.batch, self.bg_group
         )
@@ -62,9 +59,6 @@ class StartMenuState:
             group=self.ui_group,
         )
 
-        # button pushed well down from center instead of sitting on it, hint
-        # label/pitch legend follow it down so they still read as "about the
-        # button" instead of floating around the middle of the screen
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch the button below to wake it up",
             x=config.WIN_WIDTH // 2,
@@ -131,7 +125,7 @@ class StartMenuState:
 
     def _lock(self):
         self.phase = "locked"
-        self.continue_button.rect.color = self.target_color[:3]
+        self.continue_button.rect.color = self.target_color[:3] # type: ignore
         self.continue_button.label.text = "Continue"
         self.hint_label.text = "P2: click/pinch it again to head into the world"
 
