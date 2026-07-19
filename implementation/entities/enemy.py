@@ -29,11 +29,9 @@ def _bat_animation(folder):
 
 
 class Enemy:
-    # flying bat that wanders around its spawn point and takes potshots at
-    # whichever player is closer - dies in one hit from a matching-color
-    # bullet, otherwise just shrugs it off. can only ever fire bullets in
-    # its own color (see update() below), so which of the 4 it is matters:
-    # state_dungeon.py spawns exactly one of each color per room now
+    # flying bat that wanders around its spawn point and takes potshots at whichever player is closer
+    # dies in one hit from a matching-color bullet, otherwise just shrugs it off
+    # can only ever fire bullets in its own color (see update() below)
     def __init__(self, x, y, color, batch, group):
         self.x = x
         self.y = y

@@ -1,10 +1,5 @@
 # here comes the logic for P2: arrow keys to walk, hand tracking does the rest
-#
-# fun fact: gesture_tracking.py doesn't hand us clean click coordinates, it
-# just straight up drags the real mouse around and clicks it for real (see
-# Controller in there). so instead of reinventing pinch math we let hud.py
-# and the interactables below catch it via on_mouse_press/on_mouse_motion
-# like its a totally normal click, coordinates just work out that way
+
 from pyglet.window import key
 
 import config
@@ -12,11 +7,6 @@ from entities.grid_actor import GridActor
 from entities.projectile import Projectile
 from input import gesture_tracking
 
-# a sprite can only ever get darker/recolored via a multiply-tint, never
-# literally brighter than its own art (unlike the old flat-fill rectangle,
-# which could just become P2_COLOR-but-brighter) dropping the blue channel
-# is the closest "glow" analog: still reads as a highlight, without washing
-# the character out to solid white
 PINCH_GLOW_TINT = (255, 255, 140)
 NORMAL_TINT = (255, 255, 255)
 
@@ -51,10 +41,7 @@ class Player2(GridActor):
             gun.toggle()
 
     def try_shoot(self, x, y, gun, batch, group):
-        # free-aim: fires straight at wherever P2 clicked/pinched, not just
-        # when that spot happens to land exactly on an enemy - the bullet
-        # itself (state_dungeon.py's _resolve_bullets) is what decides what
-        # it actually hits along the way, same as an enemy's own shots
+        # free-aim: fires straight at wherever P2 clicked/pinched
         if not gun.active:
             return None
 

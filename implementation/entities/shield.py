@@ -1,13 +1,6 @@
 # here comes all logic for the shield since it can do 2 things now: get
 # bigger/smaller (P1 screams, 3s window) and change color (P1 holds a pitch
-# steady, 2s) - duration/breaking got cut entirely, once it's up it just
-# stays up until F closes it again. both flows are one-shot: P2 picks a mode
-# (hud button) -> P2 pinches the shield to actually start listening -> P1
-# screams/sings -> it locks -> that button goes inactive, its job is done.
-# only once *both* size and color have locked at least once does pinching
-# the shield start dragging it instead of doing nothing - no more
-# dragging/redoing either one halfway through, and no more re-arming a mode
-# that's already locked in
+# steady, 2s)
 import pyglet
 
 import config
@@ -22,9 +15,6 @@ MODE_SIZE = "size"
 # to one of these 4 folders
 _COLOR_FOLDERS = ["red", "blue", "green", "yellow"]
 
-# assets/Tornado/<color>/001-005.png: the looping idle animation. used to
-# also have a 006-009 "shield just broke" one-shot, but that only ever
-# played when duration ran out - gone along with duration itself
 TORNADO_FRAME_DURATION = 0.06
 TORNADO_IDLE_FRAMES = tuple(range(1, 6))
 TORNADO_SPRITE_PIXELS = 64  # source frames are 64x64, self.size scales from that
@@ -56,9 +46,7 @@ def colors_match(color, target, tolerance=35):
 
 
 def color_folder(color):
-    # which of the 4 sprite-folders (red/blue/green/yellow) a SHIELD_COLORS
-    # entry maps to - shared by the tornado shield, the projectiles and the
-    # enemies, all stuck picking one of 4 discrete sprite sets, not a live tint
+
     for index, target in enumerate(config.SHIELD_COLORS):
         if target[:3] == tuple(color[:3]):
             return _COLOR_FOLDERS[index]
@@ -77,8 +65,8 @@ def _tornado_idle_animation(folder):
 
 
 class PitchColorLock:
-    # shared "sing a color and hold it steady to lock it in" tracker - not
-    # matching a pre-chosen target like the gate/gem/chest do, just picking
+    # shared "sing a color and hold it steady to lock it in" tracker, 
+    # not matching a pre-chosen target like the gate/gem/chest do, just picking
     # whichever of the 4 colors you hold steadiest for PITCH_LOCK_HOLD_TIME.
     # both the shield's color mode and the gun's color picker work off this
     # exact same class now ("same logic as shield coloring")
@@ -89,7 +77,7 @@ class PitchColorLock:
         self._timer = 0.0
 
     def reset(self):
-        # hud.py calls this the moment P2 (re)pinches the color button -
+        # hud.py calls this the moment P2 (re)pinches the color button
         # starts a fresh listening window, whatever was locked before is gone
         self.locked = False
         self._bucket = None
@@ -127,9 +115,7 @@ class Shield:
     # start listening (on_mouse_press, same "pinch the object to start" idiom
     # gate/chest/gem already use) -> P1 screams/sings -> it locks -> once
     # *both* modes are locked, pinching the shield grabs it for a drag
-    # instead. either button can be pinched again at any time (renews that
-    # one mode's window, same as picking it fresh) - doing so un-grabs
-    # dragging again until that mode re-locks, same as the very first time
+    # instead
     def __init__(self, batch, group):
         self.x = 0
         self.y = 0
@@ -142,15 +128,12 @@ class Shield:
         self.listening = False
         self._grabbed = False
 
-        # True while that mode's current value is locked in - False again
-        # the moment set_mode() re-arms it, back to True once it re-locks.
-        # both together gate dragging, see _both_done
         self._size_done = False
         self._color_done = False
 
         self._color_pick = PitchColorLock()
         # size mode: how long P1's been screaming this window, and the
-        # loudest moment reached so far - see _update_size
+        # loudest moment reached so far
         self._size_timer = 0.0
         self._size_peak = config.SHIELD_MIN_SIZE
         self._size_locked = True  # nothing to grow until size mode is picked
@@ -163,12 +146,7 @@ class Shield:
 
     def set_mode(self, mode):
         # hud.py calls this every time P2 clicks/pinches a mode button,
-        # including re-picking a mode that's already locked - that's the
-        # "renew" path, P2 can come back and redo either one whenever they
-        # want. un-does that mode's "done" flag (so dragging pauses again
-        # until it re-locks) and resets listening - P2 has to pinch the
-        # shield again to actually kick the new window off, picking a mode
-        # alone doesn't start P1's scream/sing counting
+        # including re-picking a mode that's already locked
         self.mode = mode
         self.listening = False
         if mode == MODE_COLOR:
@@ -191,10 +169,7 @@ class Shield:
 
     def _both_done(self):
         # dragging is gated on *both* modes currently being locked, not just
-        # whichever one is currently selected - see on_mouse_press. renewing
-        # either one (set_mode) clears its own done flag until it re-locks,
-        # so this naturally goes False the instant P2 starts a redo and
-        # True again once it finishes
+        # whichever one is currently selected
         return self._size_done and self._color_done
 
     def _mode_locked(self):
@@ -219,20 +194,12 @@ class Shield:
             self._grabbed = True
         elif not self._mode_locked() and self.mode is not None:
             self.listening = True
-        # else: current mode's already locked but the other one isn't done
-        # yet - nothing to do until it is, no premature dragging and no
-        # re-arming a mode that's already had its shot
         return True
 
     def note_still_pressed(self, x, y):
         # a held pinch very naturally spans the whole "pinch the shield to
         # start listening -> P1 screams/sings -> locks" sequence without
-        # ever letting go in between - there's no second on_mouse_press in
-        # that case to flip _grabbed, so a still-held pointer sitting on
-        # the shield the instant *both* modes have locked (whichever one
-        # finishes second) needs to grab it right then instead of silently
-        # requiring a release-and-repress. state_dungeon.py calls this every
-        # frame the button/pinch is down - same fix as Chest.note_still_pressed
+        # ever letting go in between
         if self._both_done() and not self._grabbed and self.contains(x, y):
             self._grabbed = True
 
@@ -242,22 +209,19 @@ class Shield:
         half = self.size / 2
         self.x = min(max(self.x + dx, half), config.WIN_WIDTH - half)
         self.y = min(max(self.y + dy, half), config.WIN_HEIGHT - half)
-        self.sprite.x = self.x
-        self.sprite.y = self.y
+        self.sprite.x = self.x  # type: ignore
+        self.sprite.y = self.y  # type: ignore
 
     def on_mouse_release(self):
         self._grabbed = False
 
     def blocks(self, color):
-        # only a raised, matching-color tornado actually absorbs a bullet -
+        # only a raised, matching-color tornado actually absorbs a bullet
         # anything else is meant to fly straight through it untouched
         return self.active and colors_match(color, self.color)
 
     def activate(self, x, y):
-        # (re)raising it always spawns fresh beside P1's current spot.
-        # clamped in case that spot lands past the edge of the screen.
-        # color/size/mode all carry over from before though (only position
-        # resets) - same as before duration existed at all
+        # (re)raising it always spawns fresh beside P1's current spot
         half = self.size / 2
         self.x = min(max(x, half), config.WIN_WIDTH - half)
         self.y = min(max(y, half), config.WIN_HEIGHT - half)
@@ -312,7 +276,7 @@ class Shield:
             # only swap the sprite image when the folder actually changes,
             # re-assigning it every frame would restart the idle loop nonstop
             self._folder = folder
-            self.sprite.image = _tornado_idle_animation(folder)
+            self.sprite.image = _tornado_idle_animation(folder)  # type: ignore
         if self._color_pick.locked:
             self._color_done = True
 
@@ -329,9 +293,7 @@ class Shield:
         live_size = config.SHIELD_MIN_SIZE + normalized * (
             config.SHIELD_MAX_SIZE - config.SHIELD_MIN_SIZE
         )
-        # peak, not just the live value - "reaches after 3 seconds the
-        # highest scream size", so the loudest moment in the window wins
-        # even if P1 quiets down again before the window closes
+
         self._size_peak = max(self._size_peak, live_size)
 
         if self._size_timer >= config.SHIELD_SIZE_GROW_TIME:
@@ -340,4 +302,4 @@ class Shield:
             self.size = self._size_peak
         else:
             self.size = live_size
-        self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS
+        self.sprite.scale = self.size / TORNADO_SPRITE_PIXELS  # type: ignore

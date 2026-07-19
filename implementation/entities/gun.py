@@ -25,8 +25,8 @@ class Gun:
         self.active = not self.active
 
     def start_color_pick(self):
-        # hooked up to the gun hud button - P2 (re)pinching it starts a
-        # fresh "sing a color and hold it" window, same as the shield's
+        # hooked up to the gun hud button -> P2 (re)pinching it starts a fresh "sing a color 
+        # and hold it" window, same as the shields
         self._color_pick.reset()
 
     def update(self, dt):

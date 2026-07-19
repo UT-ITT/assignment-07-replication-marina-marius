@@ -159,7 +159,7 @@ def choose_pointer_landmark(hand_landmarks):
 # two different thresholds instead of one: a single cutoff means finger
 # jitter that straddles it makes check_pinch flicker true/false several
 # times a frame apart, which in turn made click_via_landmark fire
-# press/release/press/release instead of one clean "held" click - a real
+# press/release/press/release instead of one clean "held" click. a real
 # click-and-drag needs the pinch to *stay* registered while the fingers
 # are close, not just the instant they cross a line. entering needs a
 # tighter pinch than leaving needs a release, so once you're pinched,

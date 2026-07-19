@@ -1,12 +1,6 @@
 # P1 and P2 both need the same "walk exactly one tile, then wait" movement
 # instead of sliding around (pokemon vibes), so instead of
 # copy-pasting the stepping math into both player files it lives here once
-#
-# sprites: assets/<player1|player2>/<direction>_idle.png plus
-# <direction>_walk1/2.png for direction in (down, up, left, right) idle is
-# one still frame, walk is a 2-frame loop, "facing" is whichever direction
-# was last actually pressed (held over after stopping, same as most top-down
-# games you don't snap back to facing down the instant you let go of the key)
 import pyglet
 
 import config
@@ -14,14 +8,10 @@ from entities.sprite_anim import load_image
 
 WALK_FRAME_DURATION = 0.15
 
-# the sprites render at half the movement tile's size, centered on it - full
-# size made both players look oversized/blocky next to the tilemap's much
-# finer 16px art. movement/collision/interactable-radius math is untouched,
-# this only shrinks and re-centers what actually gets drawn
+# the sprites render at half the movement tile's size, centered on it
 PLAYER_RENDER_SCALE = 0.5
 
-# how much smaller than the rendered sprite the actual collision box is -
-# a forgiving "body" hitbox, not the full sprite bounding box
+# how much smaller than the rendered sprite the actual collision box is
 COLLISION_SHRINK = 0.6
 
 # dx, dy (as step_towards already receives them) -> sprite folder direction name
@@ -47,8 +37,8 @@ def _load_sprite_set(folder):
             walk2 = load_image(f"{folder}/{direction}_walk2.png", anchor_center=False)
             directions[direction] = {
                 "idle": idle,
-                "walk": pyglet.image.Animation.from_image_sequence(
-                    [walk1, walk2], WALK_FRAME_DURATION, loop=True
+                "walk": pyglet.image.Animation.from_image_sequence(  # type: ignore
+                    [walk1, walk2], WALK_FRAME_DURATION, loop=True  # type: ignore
                 ),
             }
         _sprite_sets[folder] = directions
@@ -80,19 +70,6 @@ class GridActor:
         render_size = size * PLAYER_RENDER_SCALE
         self._render_offset = (size - render_size) / 2
 
-        # tilemap collision (is_walkable) should test a box shaped like the
-        # actual character, not the much bigger 64px movement tile - sized
-        # off render_size (what's actually drawn on screen) rather than
-        # native sprite pixels times the map's own scale factor, which used
-        # to let the hitbox end up *bigger* than the visible sprite itself
-        # on any map scaled up past ~1x (dungeon/treasure both sit around
-        # 1.6-2.0). COLLISION_SHRINK on top of that since a hitbox matching
-        # the sprite's full bounding box is still generous, not forgiving -
-        # a still noticeably-smaller box is what actually lets movement feel
-        # tight without catching on every corner. no tilemap (states with no
-        # walkable-tile screen) -> no collision_scale -> falls back to the
-        # full size x size box, which is simply never used since those
-        # screens never pass is_walkable
         if collision_scale is None:
             self.collision_width = size
             self.collision_height = size
@@ -108,10 +85,7 @@ class GridActor:
         self.sprite.height = render_size
 
     def collision_box(self):
-        # (x, y, width, height) of the actual hitbox in world space - the
-        # same box step_towards checks against is_walkable, not the full
-        # movement tile. anything that wants "is the player really standing
-        # here" (Gate.try_enter) should use this instead of guessing a size
+
         return (
             self.x + (self.size - self.collision_width) / 2,
             self.y + (self.size - self.collision_height) / 2,
@@ -129,7 +103,7 @@ class GridActor:
 
     @staticmethod
     def axis_from_keys(keys, negative_key, positive_key):
-        # turns a key pair into -1/0/1 - mash both at once and they just cancel out
+        # turns a key pair into -1/0/1, mash both at once and they just cancel out
         if keys[positive_key] and not keys[negative_key]:
             return 1
         if keys[negative_key] and not keys[positive_key]:
@@ -154,11 +128,7 @@ class GridActor:
 
         new_x = min(max(self.x + dx * self.size, 0), config.WIN_WIDTH - self.size)
         new_y = min(max(self.y + dy * self.size, 0), config.WIN_HEIGHT - self.size)
-        # only screens with a walkable tilemap pass is_walkable - leaving it
-        # None elsewhere (nothing currently does) keeps things free-roaming.
-        # deliberately not resetting _step_timer on a blocked attempt: it's
-        # already <=0 here, so bumping a wall re-checks every frame instead
-        # of eating a wasted cooldown once the way actually clears
+
         if is_walkable is not None:
 
             check_x = new_x + (self.size - self.collision_width) / 2

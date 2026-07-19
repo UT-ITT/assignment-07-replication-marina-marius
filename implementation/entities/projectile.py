@@ -1,10 +1,6 @@
 # bullets: enemy ones and P2 ones, both fly in a straight line and
 # completely ignore grid movement -> a bullet doesn't care whose turn it is
-#
-# sprites: assets/projectile/<color>/001-010.png. 001-005 is the looping
-# in-flight animation, 006-010 is a one-shot explosion played on impact
-# folder picked via shield.py color_folder(), same bucket index the
-# shield/gate/gun already use for "which color is this"
+
 import math
 
 import pyglet
@@ -60,13 +56,7 @@ class Projectile:
         self.finished = (
             False  # explosion animation (if any) has played out, safe to drop
         )
-        # pyglet fires on_animation_end every time a *looping* animation
-        # wraps around too, not just once for a one-shot one (see
-        # pyglet/sprite.py's _animate) - the in-flight animation loops the
-        # whole time this bullet is alive, so without this flag
-        # _on_explosion_end would fire (and delete the sprite) every lap of
-        # the flight loop, not just when destroy() actually starts the
-        # one-shot explosion animation
+
         self._exploding = False
 
         dx, dy = target_x - x, target_y - y
@@ -88,8 +78,8 @@ class Projectile:
         # art faces along +x (right) by default. pyglet's sprite.rotation is
         # clockwise degrees in this same y-up world space, so to make the
         # sprite's default-right tip point at (vx, vy) instead, negate the
-        # standard (counter-clockwise) math angle atan2(vy, vx) - a bullet
-        # never turns mid-flight, so this is set once and left alone
+        # standard (counter-clockwise) math angle atan2(vy, vx)
+        #  a bullet never turns mid-flight, so this is set once and left alone
         self.sprite.rotation = -math.degrees(math.atan2(self.vy, self.vx))
 
     def update(self, dt):
