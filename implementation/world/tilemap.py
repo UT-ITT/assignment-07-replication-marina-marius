@@ -37,11 +37,24 @@ class TileMap:
         # times, one Animation object per gid beats one per placement
         self._animation_cache = {}
 
+        # every layer used to render into the one shared `group` the caller
+        # passed in, with nothing distinguishing which layer a sprite came
+        # from - fine as long as no two layers ever shared a texture, but
+        # dungeon.tmx's Floor/earth_floor/walls all pull from the same
+        # tileset image, so pyglet's internal per-texture batching was free
+        # to interleave their draw calls however it liked instead of
+        # respecting Tiled's actual layer order. one child Group per tile
+        # layer, ordered to match Tiled's own top-to-bottom layer list,
+        # fixes that - tiles within a single layer still don't need their
+        # own ordering (nothing on the same layer ever overlaps itself)
+        layer_index = 0
         for layer in self.data.visible_layers:
             if not hasattr(layer, "tiles"):
                 continue  # skip object groups / image layers, only draw tile layers
 
             blocks = bool(getattr(layer, "properties", {}).get("blocks"))
+            layer_group = pyglet.graphics.Group(order=layer_index, parent=group)
+            layer_index += 1
 
             for x, y, gid in layer.iter_data():
                 if not gid:
@@ -55,7 +68,7 @@ class TileMap:
                 px = x * self.tile_width
                 py = (self.height_tiles - 1 - y) * self.tile_height
                 sprite = pyglet.sprite.Sprite(
-                    self._image_for_gid(gid), x=px, y=py, batch=batch, group=group
+                    self._image_for_gid(gid), x=px, y=py, batch=batch, group=layer_group
                 )
                 self.sprites.append(sprite)
                 self._native_positions.append((px, py))
