@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="50" height="28" tilewidth="16" tileheight="16" infinite="0" nextlayerid="14" nextobjectid="1">
- <tileset firstgid="1" name="x500" tilewidth="16" tileheight="16" tilecount="0" columns="23">
-  <image source="../../../../../Downloads/x500.png" width="368" height="256"/>
- </tileset>
  <tileset firstgid="1" name="Walls_interior" tilewidth="16" tileheight="16" tilecount="192" columns="24">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Walls_interior.png" width="384" height="128"/>
+  <image source="Walls_interior.png" width="384" height="128"/>
  </tileset>
  <tileset firstgid="193" name="Interior_objects" tilewidth="16" tileheight="16" tilecount="576" columns="24">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Interior_objects.png" width="384" height="384"/>
+  <image source="Interior_objects.png" width="384" height="384"/>
  </tileset>
  <tileset firstgid="769" name="Guildmaster" tilewidth="16" tileheight="16" tilecount="36" columns="18">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Guildmaster.png" width="288" height="32"/>
+  <image source="Guildmaster.png" width="288" height="32"/>
   <tile id="0">
    <animation>
     <frame tileid="0" duration="150"/>
@@ -109,7 +106,7 @@
   </tile>
  </tileset>
  <tileset firstgid="805" name="Talking_people" tilewidth="16" tileheight="16" tilecount="108" columns="36">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Talking_people.png" width="576" height="48"/>
+  <image source="Talking_people.png" width="576" height="48"/>
   <tile id="0">
    <animation>
     <frame tileid="0" duration="150"/>
@@ -256,7 +253,7 @@
   </tile>
  </tileset>
  <tileset firstgid="913" name="Citizen4_Idle_with_shadow" tilewidth="16" tileheight="16" tilecount="192" columns="24">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Citizen1_Idle.png" width="384" height="128"/>
+  <image source="Citizen1_Idle.png" width="384" height="128"/>
   <tile id="0">
    <animation>
     <frame tileid="0" duration="150"/>
@@ -515,7 +512,7 @@
   </tile>
  </tileset>
  <tileset firstgid="1105" name="Citizen4_Idle_with_shadow" tilewidth="16" tileheight="16" tilecount="192" columns="24">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Fighter2_Idle.png" width="384" height="128"/>
+  <image source="Fighter2_Idle.png" width="384" height="128"/>
   <tile id="0">
    <animation>
     <frame tileid="0" duration="150"/>
@@ -774,7 +771,7 @@
   </tile>
  </tileset>
  <tileset firstgid="1297" name="Citizen4_Walk_with_shadow" tilewidth="16" tileheight="16" tilecount="96" columns="12">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Citizen2_Walk.png" width="192" height="128"/>
+  <image source="Citizen2_Walk.png" width="192" height="128"/>
   <tile id="0">
    <animation>
     <frame tileid="0" duration="150"/>
@@ -937,7 +934,7 @@
   </tile>
  </tileset>
  <tileset firstgid="1393" name="Windows_doors" tilewidth="16" tileheight="16" tilecount="324" columns="18">
-  <image source="../../../../../Downloads/craftpix-net-189780-free-top-down-pixel-art-guild-hall-asset-pack/Tiled_files/Windows_doors.png" width="288" height="288"/>
+  <image source="Windows_doors.png" width="288" height="288"/>
   <tile id="12">
    <animation>
     <frame tileid="12" duration="150"/>
