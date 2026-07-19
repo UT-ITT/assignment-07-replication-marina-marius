@@ -98,6 +98,18 @@ class GridActor:
         self.sprite.width = render_size
         self.sprite.height = render_size
 
+    def collision_box(self):
+        # (x, y, width, height) of the actual hitbox in world space - the
+        # same box step_towards checks against is_walkable, not the full
+        # movement tile. anything that wants "is the player really standing
+        # here" (Gate.try_enter) should use this instead of guessing a size
+        return (
+            self.x + (self.size - self.collision_width) / 2,
+            self.y + (self.size - self.collision_height) / 2,
+            self.collision_width,
+            self.collision_height,
+        )
+
     @property
     def color(self):
         return self.sprite.color
