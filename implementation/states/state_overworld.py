@@ -64,7 +64,7 @@ class OverworldState:
         # 1.5x the original 80px size, recentered on the same spot so it
         # grows in place instead of shifting toward one corner
         self.gate = Gate(
-            822, 210, 120,
+            822, 240, 120,
             self.batch, self.entity_group, on_unlock=self._enter_dungeon,
             stats=self.manager.stats,
         )
@@ -127,9 +127,9 @@ class OverworldState:
         # gate unlocked color alone doesn't open it anymore, both P1 and
         # P2 have to physically walk in, whoevers first just disappears
         # until the other catches up (see Gate.try_enter)
-        if self.gate.try_enter(self.player1, self.player1.x, self.player1.y):
+        if self.gate.try_enter(self.player1, *self.player1.collision_box()):
             self.player1.sprite.visible = False
-        if self.gate.try_enter(self.player2, self.player2.x, self.player2.y):
+        if self.gate.try_enter(self.player2, *self.player2.collision_box()):
             self.player2.sprite.visible = False
 
     def on_draw(self):
