@@ -71,6 +71,7 @@ def create_debug_window():
         y=debug_window.height - 24,
         anchor_x="left",
         anchor_y="top",
+        font_name=config.FONT_NAME,
         color=(255, 255, 255, 255),
     )
 

@@ -17,10 +17,10 @@ from states.state_treasure import TreasureState
 from states.state_end import EndState
 
 # pick which state to jump straight into: uncomment others
-# TARGET_STATE = "start_menu"
+TARGET_STATE = "start_menu"
 # TARGET_STATE = "overworld"
 # TARGET_STATE = "dungeon"
-TARGET_STATE = "treasure"
+# TARGET_STATE = "treasure"
 # TARGET_STATE = "end"
 
 window = pyglet.window.Window(config.WIN_WIDTH, config.WIN_HEIGHT, config.WIN_TITLE)

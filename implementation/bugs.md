@@ -379,6 +379,16 @@ two different problems hiding in that one crash, not one:
 
 verified: both files parse as valid XML after the rewrite, both `TileMap`s load and build real sprites (1744 and 1716 respectively) with zero crashes, 30 simulated frames apiece run clean, and all 5 states (including these two) still construct together in one `StateManager` without stepping on each other - same sweep used after every other room landed this session.
 
+## one font, everywhere, and the start/end buttons stop sitting on top of everything else
+
+**the font**: `assets/Play-Regular.ttf` should be what every single piece of text in the game actually renders in, not whatever pyglet's system-font fallback happens to pick per machine. registered it once in `config.py` (`pyglet.font.add_file(...)`, right next to the other "runs once at import, before anything else needs it" setup like the nearest-neighbor texture filtering already sitting there) and exported `config.FONT_NAME`. checked the font's own internal name table instead of guessing from the filename - `Play-Regular.ttf` identifies itself as family `"Play"`, not `"Play-Regular"` or `"Play Regular"` - confirmed `pyglet.font.have_font("Play")` and an actual loaded `Label`'s `.font_name` both come back `"Play"` before trusting it anywhere.
+
+every `pyglet.text.Label(...)` in the codebase (17 call sites - every hint label, every gate/gem/chest label, `world/buttons.py`'s button text, hud pitch-legend labels, all 3 start/end screen labels, even `main.py`'s `--debug` overlay) now passes `font_name=config.FONT_NAME`. `world/buttons.py` didn't import `config` at all before this, added it. verified with an AST scan afterward instead of trusting a grep - walked every `.py` file for `Label(...)` calls and confirmed zero are missing the kwarg, not just eyeballing the list.
+
+**the buttons**: both the start menu's "Start"/"Continue" button and the end screen's "Restart" button sat almost exactly on vertical center (`WIN_HEIGHT // 2`-relative math). moved both well down toward the bottom of the screen instead - start menu's button now at `y=100` (was `WIN_HEIGHT//2-40` = 320), end screen's at `y=120` (was `WIN_HEIGHT//2-60` = 300) - and dragged their hint labels / the start menu's pitch legend down along with them so they still read as "about the button" instead of floating in the middle of a now-empty screen.
+
+verified: `config.FONT_NAME` resolves and is actually registered: `pyglet.font.have_font("Play")` is `True`. every label sampled directly off 4 built states (`title_label`/`rules_label`/`hint_label`/button label on both start and end screens) reports `font_name == "Play"`. both screens still construct and update clean, and both buttons land in their new, clearly-lower positions.
+
 ## quick.py - a way in that skips the walk
 
 added a small `quick.py` alongside `main.py` for exactly this kind of testing - same bootstrap (real audio stream, real gesture tracking, all 5 states registered), just calls `manager.set_state(args.state)` instead of always starting at `start_menu`, defaulting to `treasure` if no state's named on the command line. saves walking through start menu -> overworld -> dungeon by hand every single time only the treasure chamber (or whichever screen) actually needs eyes on it.

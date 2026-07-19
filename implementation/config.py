@@ -8,6 +8,16 @@ from pyglet.gl import GL_NEAREST
 pyglet.image.Texture.default_min_filter = GL_NEAREST
 pyglet.image.Texture.default_mag_filter = GL_NEAREST
 
+# registered once, here, since config.py is already imported everywhere
+# before any pyglet.text.Label gets built - every Label in the game passes
+# font_name=config.FONT_NAME so this one .ttf is what actually shows up
+# instead of whatever font pyglet's system fallback happens to pick.
+# "Play" is the family name embedded in the file itself (checked directly,
+# not guessed from the filename - Play-Regular.ttf's own name table says
+# "Play", not "Play-Regular" or "Play Regular")
+pyglet.font.add_file("assets/Play-Regular.ttf")
+FONT_NAME = "Play"
+
 WIN_WIDTH = 1280
 WIN_HEIGHT = 720
 WIN_TITLE = "Insert super duper cool title"

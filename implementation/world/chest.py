@@ -112,6 +112,7 @@ class Chest(Interactable):
             y=y + size + 10,
             anchor_x="center",
             anchor_y="bottom",
+            font_name=config.FONT_NAME,
             font_size=11,
             color=(255, 255, 255, 255),
             batch=batch,

@@ -82,6 +82,7 @@ class OverworldState:
             y=config.WIN_HEIGHT - 30,
             anchor_x="left",
             anchor_y="center",
+            font_name=config.FONT_NAME,
             font_size=14,
             color=config.TEXT_COLOR,
             batch=self.batch,

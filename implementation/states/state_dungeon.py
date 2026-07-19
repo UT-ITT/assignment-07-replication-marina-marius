@@ -92,7 +92,7 @@ class DungeonState:
             "P2: click/pinch the gem to wake it | P1: sing it its color to start the fight",
             x=20, y=config.WIN_HEIGHT - 30,
             anchor_x="left", anchor_y="center",
-            font_size=14, color=config.TEXT_COLOR,
+            font_name=config.FONT_NAME, font_size=14, color=config.TEXT_COLOR,
             batch=self.batch, group=self.ui_group,
         )
 

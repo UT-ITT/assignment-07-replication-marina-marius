@@ -1,5 +1,7 @@
 import pyglet
 
+import config
+
 # Buttons: currently just a rectangle with a label that changes color when activated
 # for P2 clicking/pinching it during the start menu
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -24,7 +26,7 @@ class Button:
         self.label = pyglet.text.Label(
             text, x=x + width / 2, y=y + height / 2,
             anchor_x="center", anchor_y="center",
-            font_size=16, batch=batch, group=group,
+            font_name=config.FONT_NAME, font_size=16, batch=batch, group=group,
         )
 
     def hit_test(self, x, y):

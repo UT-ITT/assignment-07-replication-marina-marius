@@ -22,7 +22,7 @@ class StartMenuState:
         self.bg_group = pyglet.graphics.Group(order=0)
         self.ui_group = pyglet.graphics.Group(order=1)
 
-        # no player movement on this screen, so no is_walkable wiring needed -
+        # no player movement on this screen, so no is_walkable wiring needed
         # just the same tilemap rendering (incl. animated tiles) as every
         # other room, purely as a backdrop for the button/title UI
         self.tilemap = TileMap(
@@ -32,11 +32,12 @@ class StartMenuState:
 
         # TODO: swap for a real title image/logo
         self.title_label = pyglet.text.Label(
-            "GAME TITLE",
+            "WHOAMONIZE",
             x=config.WIN_WIDTH // 2,
             y=config.WIN_HEIGHT - 120,
             anchor_x="center",
             anchor_y="center",
+            font_name=config.FONT_NAME,
             font_size=36,
             color=config.TEXT_COLOR,
             batch=self.batch,
@@ -54,18 +55,23 @@ class StartMenuState:
             multiline=True,
             anchor_x="center",
             anchor_y="center",
+            font_name=config.FONT_NAME,
             font_size=14,
             color=config.TEXT_COLOR,
             batch=self.batch,
             group=self.ui_group,
         )
 
+        # button pushed well down from center instead of sitting on it, hint
+        # label/pitch legend follow it down so they still read as "about the
+        # button" instead of floating around the middle of the screen
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch the button below to wake it up",
             x=config.WIN_WIDTH // 2,
-            y=config.WIN_HEIGHT // 2 + 80,
+            y=200,
             anchor_x="center",
             anchor_y="center",
+            font_name=config.FONT_NAME,
             font_size=16,
             color=config.TEXT_COLOR,
             batch=self.batch,
@@ -74,7 +80,7 @@ class StartMenuState:
 
         self.continue_button = Button(
             x=config.WIN_WIDTH // 2 - 100,
-            y=config.WIN_HEIGHT // 2 - 40,
+            y=100,
             width=200,
             height=60,
             text="Start",
@@ -84,7 +90,7 @@ class StartMenuState:
 
         # cheat sheet so P1 knows roughly what to sing instead of guessing
         self.pitch_legend = PitchLegend(
-            config.WIN_WIDTH // 2 - 61, config.WIN_HEIGHT // 2 - 110,
+            config.WIN_WIDTH // 2 - 61, 40,
             self.batch, self.ui_group,
         )
 

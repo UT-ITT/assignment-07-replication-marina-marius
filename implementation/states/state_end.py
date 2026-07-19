@@ -30,7 +30,8 @@ class EndState:
             "",
             x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 120,
             anchor_x="center", anchor_y="center",
-            font_size=32, batch=self.batch, group=self.ui_group,
+            font_name=config.FONT_NAME, font_size=32,
+            batch=self.batch, group=self.ui_group,
         )
 
         # TODO: swap for real end-game metrics UI once we have one
@@ -38,13 +39,16 @@ class EndState:
             "",
             x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 + 60,
             anchor_x="center", anchor_y="center",
-            font_size=16, color=config.TEXT_COLOR,
+            font_name=config.FONT_NAME, font_size=16, color=config.TEXT_COLOR,
             batch=self.batch, group=self.ui_group,
         )
 
+        # pushed well down from center instead of sitting on it - reads as
+        # its own "next step" area under the title/stats, not competing
+        # with them for the middle of the screen
         self.restart_button = Button(
             x=config.WIN_WIDTH // 2 - 100,
-            y=config.WIN_HEIGHT // 2 - 60,
+            y=120,
             width=200,
             height=60,
             text="Restart",
@@ -54,9 +58,9 @@ class EndState:
 
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch Restart (or press ENTER) to head back to the start menu",
-            x=config.WIN_WIDTH // 2, y=config.WIN_HEIGHT // 2 - 120,
+            x=config.WIN_WIDTH // 2, y=60,
             anchor_x="center", anchor_y="center",
-            font_size=14, color=config.TEXT_COLOR,
+            font_name=config.FONT_NAME, font_size=14, color=config.TEXT_COLOR,
             batch=self.batch, group=self.ui_group,
         )
 
