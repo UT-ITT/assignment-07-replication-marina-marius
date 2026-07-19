@@ -31,8 +31,14 @@ GATE_LOOP_FRAMES = tuple(range(0, 6))
 
 
 def _gate_loop_animation(folder):
+    # anchor_center must match _gate_listening_image's False below - the
+    # sprite swaps between these two constantly (every click, every lock),
+    # and self.x/self.y (what contains()/try_enter() actually test against)
+    # never changes, so a mismatched anchor here made the *rendered* sprite
+    # jump by half its own size relative to its real hitbox on every swap
     return load_animation(
-        f"assets/gate/{folder}", GATE_LOOP_FRAMES, GATE_FRAME_DURATION, loop=True, name_prefix="tile"
+        f"assets/gate/{folder}", GATE_LOOP_FRAMES, GATE_FRAME_DURATION, loop=True,
+        name_prefix="tile", anchor_center=False,
     )
 
 
@@ -224,13 +230,18 @@ class Gate(Interactable):
         elif self.on_unlock:
             self.on_unlock()
 
-    def try_enter(self, player, x, y):
+    def try_enter(self, player, x, y, width=config.TILE_SIZE, height=config.TILE_SIZE):
+        # width/height default to a full movement tile for backward
+        # compatibility, but every real caller now passes the player's own
+        # collision_box() - a flat TILE_SIZE (64px) box was always far
+        # bigger than the actual ~16-40px character it stood in for, which
+        # made "walk into the gate" trigger from well outside the sprite
         if not self.walk_in_required or not self.locked or player in self._entered:
             return False
 
         overlaps = (
-            x < self.x + self.size and x + config.TILE_SIZE > self.x
-            and y < self.y + self.size and y + config.TILE_SIZE > self.y
+            x < self.x + self.size and x + width > self.x
+            and y < self.y + self.size and y + height > self.y
         )
         if not overlaps:
             return False
