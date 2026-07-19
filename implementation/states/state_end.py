@@ -2,6 +2,7 @@ import pyglet
 from pyglet.window import key
 from world import music
 from world.buttons import Button
+from world.tilemap import TileMap
 import config
 
 # Screen 4: Game Over/Game Won
@@ -16,6 +17,14 @@ class EndState:
         self.batch = pyglet.graphics.Batch()
         self.bg_group = pyglet.graphics.Group(order=0)
         self.ui_group = pyglet.graphics.Group(order=1)
+
+        # no player movement here either - same tilemap rendering (incl.
+        # animated tiles) as every other room, purely a backdrop for the
+        # win/lose title + stats + restart button
+        self.tilemap = TileMap(
+            "assets/chamber/endscreen.tmx", self.batch, self.bg_group
+        )
+        self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
         self.title_label = pyglet.text.Label(
             "",

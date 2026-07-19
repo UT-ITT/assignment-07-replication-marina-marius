@@ -3,6 +3,7 @@ import random
 import pyglet
 from world.buttons import Button
 from world.hud import PitchLegend
+from world.tilemap import TileMap
 import config
 from entities.shield import colors_match, frequency_to_color
 from input import audio_input
@@ -20,6 +21,14 @@ class StartMenuState:
         self.batch = pyglet.graphics.Batch()
         self.bg_group = pyglet.graphics.Group(order=0)
         self.ui_group = pyglet.graphics.Group(order=1)
+
+        # no player movement on this screen, so no is_walkable wiring needed -
+        # just the same tilemap rendering (incl. animated tiles) as every
+        # other room, purely as a backdrop for the button/title UI
+        self.tilemap = TileMap(
+            "assets/chamber/startscreen.tmx", self.batch, self.bg_group
+        )
+        self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
 
         # TODO: swap for a real title image/logo
         self.title_label = pyglet.text.Label(
