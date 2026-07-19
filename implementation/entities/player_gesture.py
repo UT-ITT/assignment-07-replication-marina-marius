@@ -7,6 +7,7 @@
 # like its a totally normal click, coordinates just work out that way
 from pyglet.window import key
 
+import config
 from entities.grid_actor import GridActor
 from entities.projectile import Projectile
 from input import gesture_tracking
@@ -43,10 +44,10 @@ class Player2(GridActor):
         return None
 
     def handle_key_press(self, symbol, gun):
-        # P1 gets F/E via Player1.handle_key_press, P2 gets C here, two
+        # P1 gets F/E via Player1.handle_key_press, P2 gets L here, two
         # separate dispatch points so the two players keys can never get
         # mixed up at the routing level
-        if symbol == key.C:
+        if symbol == key.L:
             gun.toggle()
 
     def try_shoot(self, x, y, enemies, gun, batch, group):
@@ -71,5 +72,6 @@ class Player2(GridActor):
                     batch,
                     group,
                     owner="player2",
+                    speed=config.PLAYER_BULLET_SPEED,
                 )
         return None
