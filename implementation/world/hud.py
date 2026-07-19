@@ -1,9 +1,8 @@
 # this file is the for the dungeon overlay
 # so the idea is following:
 # P1 can do the following with theri voice
-# 1. change color of shield
-# 2. shange size of shield
-# 3. change duration of shield
+# 1. change color of shield (hold a pitch steady for 2s)
+# 2. change size of shield (scream for a 3s window, loudest moment wins)
 # to set those P2 need to pinch the right overlay so P1 can start using all the vocal chords they have
 # why? because its easier handling for us (in my opinion)
 import pyglet
@@ -14,14 +13,13 @@ from world.buttons import Button
 # (mode we hand to shield.set_mode, label the button actually shows)
 MODE_BUTTONS = [
     ("color", "Pitch -> Color"),
-    ("size", "Volume -> Size"),
-    ("tune", "Pitch Ladder"),
+    ("size", "Scream -> Size (3s)"),
 ]
 
 
 class ShieldHud:
     # pops up whenever the shield is out (F key), P2 pinches/clicks a button
-    # here to decide which of the three mechanics P1 voice controls right now
+    # here to decide which of the two mechanics P1 voice controls right now
     def __init__(self, shield, batch, group):
         self.shield = shield
         self.buttons = {}
@@ -88,12 +86,13 @@ class ShieldHud:
 
 
 class GunHud:
-    # P2 other hud button: locks in whatever color the gun currently has
-    # "loaded" (P1 live sung pitch), so P2 can go shoot without P1 having
-    # to hold the note the whole fight. only shown while the gun is drawn (C)
+    # P2's other hud button: same "sing a color and hold it for 2s" trick as
+    # the shield's color mode now, just for whatever color gets loaded into
+    # P2's next bullets instead of the shield. only shown while the gun is
+    # drawn (L)
     def __init__(self, gun, batch, group, x, y):
         self.gun = gun
-        self.button = Button(x, y, 160, 50, "Gun: unlocked", batch, group)
+        self.button = Button(x, y, 160, 50, "Gun: sing a color!", batch, group)
         self.set_visible(False)
 
     def set_visible(self, visible):
@@ -103,12 +102,12 @@ class GunHud:
     def sync_with_gun(self):
         self.set_visible(self.gun.active)
         self.button.rect.color = self.gun.color[:3]
-        self.button.label.text = "Gun: LOCKED" if self.gun.locked else "Gun: unlocked"
+        self.button.label.text = "Gun: LOCKED" if self.gun.locked else "Gun: sing a color!"
 
     def on_mouse_press(self, x, y, button, modifiers):
         if not self.gun.active or not self.button.hit_test(x, y):
             return False
-        self.gun.toggle_lock()
+        self.gun.start_color_pick()
         return True
 
 
