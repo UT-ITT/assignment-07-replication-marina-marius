@@ -1,3 +1,5 @@
+import random
+
 import pyglet
 from pyglet.window import key
 import config
@@ -6,6 +8,7 @@ from entities.player_gesture import Player2
 from world.chest import Chest, SkullChest
 from world.gem import Gem
 from world.hud import PitchLegend
+from world.tilemap import TileMap
 
 # Screen 3: Treasure Chamber
 # Created a skeleton since we can test the logic and later on prettifyyyy it with good looking sprites
@@ -25,34 +28,78 @@ class TreasureState:
         self.entity_group = pyglet.graphics.Group(order=1)
         self.ui_group = pyglet.graphics.Group(order=2)
 
-        # TODO: replace with tilemap.py rendering of the treasure room layout
-        self.background = pyglet.shapes.Rectangle(
-            0, 0, config.WIN_WIDTH, config.WIN_HEIGHT,
-            color=(50, 40, 20), batch=self.batch, group=self.bg_group,
+        # dragon statue/altar fills most of the top half of the map (fenced
+        # off, "blocks" on Dragon_body_head/Fence), flanked by two open
+        # grass_chest patches (left: tile cols 0-11, right: 40-49, rows
+        # 8-21) - the chests start out sitting in the grass there. below
+        # that, rows 22-25 are a fully open floor band running the width of
+        # the room, right in front of the fenced dragon - that's where the
+        # 3 marked slots (and eventually the skull chest/gem/reveal) sit,
+        # "the puzzle with the chest" playing out at the dragon's feet
+        self.tilemap = TileMap(
+            "assets/chamber/treasure.tmx", self.batch, self.bg_group
+        )
+        self.tilemap.fit_to(config.WIN_WIDTH, config.WIN_HEIGHT)
+
+        self.player1 = Player1(
+            595, 59, self.batch, self.entity_group, collision_scale=self.tilemap.scale,
+        )
+        self.player2 = Player2(
+            646, 59, self.batch, self.entity_group, collision_scale=self.tilemap.scale,
         )
 
-        self.player1 = Player1(200, 120, self.batch, self.entity_group)
-        self.player2 = Player2(260, 120, self.batch, self.entity_group)
-
-        # 3 chests, solved strictly in order, each needs P1 color and then
-        # a P2 drag onto its marked slot, chest N+1 only wakes up once N is solved
-        slot_positions = [
-            (config.WIN_WIDTH // 2 - 220, 200),
-            (config.WIN_WIDTH // 2 - 20, 200),
-            (config.WIN_WIDTH // 2 + 180, 200),
+        # 3 chests, colored and placed strictly one at a time (chest N+1
+        # only wakes up once N is placed *somewhere*), but the right/wrong
+        # verdict waits for all 3 - dropping a chest into a slot just snaps
+        # it there, no reveal, until every chest has been placed and the
+        # whole group gets checked at once (see _on_chest_placed). spawn
+        # points picked directly from grass_chest tiles (2 on the left
+        # patch, 1 on the right - confirmed walkable against the real
+        # tilemap, not guessed), slots laid out left-to-right along the
+        # open floor band in front of the dragon - those 3 physical spots
+        # never move, but which chest belongs at which spot is randomized
+        # (see colors/shuffled_slots below)
+        self._slot_positions = [
+            (449, 92),
+            (628, 92),
+            (807, 92),
         ]
         spawn_positions = [
-            (config.WIN_WIDTH // 2 - 220, 420),
-            (config.WIN_WIDTH // 2 - 20, 420),
-            (config.WIN_WIDTH // 2 + 180, 420),
+            (65, 425),
+            (193, 245),
+            (1140, 348),
         ]
-        colors = config.SHIELD_COLORS[:3]
+        # bigger pool than just the 3 spawn points above, so a scattered
+        # retry doesn't always land the chests back in the exact same 3
+        # spots - all confirmed walkable against the real tilemap the same
+        # way the original 3 were, just more of them to draw from
+        self._scatter_positions = [
+            (39, 450), (116, 322), (218, 194),
+            (1063, 425), (1165, 297), (1217, 169),
+        ]
+
+        # colors are picked independently per chest, not sampled without
+        # replacement - two (or all three) chests landing on the same color
+        # is a real, intended possible outcome, not a bug to avoid. slots
+        # are still exactly these 3 fixed spots, but shuffled before being
+        # handed out one-per-chest, so which chest (i.e. which position in
+        # the solve order) belongs at which physical spot is random too -
+        # that's what keeps a fixed, discoverable order even in the
+        # same-color-everywhere worst case: the *positions* are still each
+        # chest's own, even when the colors alone can't tell them apart
+        colors = [random.choice(config.SHIELD_COLORS) for _ in range(3)]
+        shuffled_slots = random.sample(self._slot_positions, len(self._slot_positions))
 
         self.chests = [
             Chest(
                 spawn_positions[i][0], spawn_positions[i][1], 50,
-                colors[i], slot_positions[i], self.batch, self.entity_group,
-                on_solved=self._advance, stats=self.manager.stats,
+                colors[i], shuffled_slots[i], self.batch, self.entity_group,
+                on_placed=self._on_chest_placed, stats=self.manager.stats,
+                # which slots are still open right now, queried fresh on
+                # every drop since a sibling chest placed earlier this round
+                # takes one off the table - a drop only ever snaps into one
+                # that's still free, right or wrong doesn't matter here
+                slots_provider=self._free_slots,
             )
             for i in range(3)
         ]
@@ -71,6 +118,11 @@ class TreasureState:
         self.gem = None
         self.reveal_timer = 0.0
 
+        # tracks where a held pinch/mouse button currently is - a chest can
+        # lock its color while that same press is still down (see
+        # Chest.note_still_pressed), None the instant it's released
+        self._pointer_down_at = None
+
         self.hint_label = pyglet.text.Label(
             "P2: click/pinch the glowing chest to wake it | P1: sing it its color, "
             "then P2: drag it onto its marked spot - solve chests in order",
@@ -88,25 +140,55 @@ class TreasureState:
     def on_exit(self):
         self.manager.window.remove_handlers(self.keys)
 
-    def _advance(self):
+    def _free_slots(self):
+        taken = {chest.current_slot for chest in self.chests if chest.current_slot is not None}
+        return [slot for slot in self._slot_positions if slot not in taken]
+
+    def _on_chest_placed(self, chest):
+        # fires the instant any chest snaps into a slot, right or wrong -
+        # this chest doesn't get its own verdict, only the group does, once
+        # every chest has been placed *somewhere*
         self.progress += 1
         if self.progress < len(self.chests):
             self.chests[self.progress].activate()
+            return
+
+        if all(c.current_slot == c.target_slot for c in self.chests):
+            self._all_correct()
         else:
-            # all 3 solved - sit on that for a beat before the room reacts
-            self.phase = "waiting"
-            self._wait_timer = SOLVED_WAIT_TIME
-            self.hint_label.text = "all three chests are glowing... something's happening"
+            self._scatter_chests()
+
+    def _all_correct(self):
+        # sit on that for a beat before the room reacts
+        self.phase = "waiting"
+        self._wait_timer = SOLVED_WAIT_TIME
+        self.hint_label.text = "all three chests are glowing... something's happening"
+
+    def _scatter_chests(self):
+        # wrong combination - every chest bounces back at once (never just
+        # the wrong ones, there's no partial credit to leak), uncolored,
+        # to a fresh spot drawn from a wider pool than the original 3 so a
+        # retry doesn't look identical to the attempt that just failed.
+        # solve order restarts from chest 0
+        self.hint_label.text = "wrong combination - the chests scatter, try again!"
+        new_spots = random.sample(self._scatter_positions, len(self.chests))
+        for chest, spot in zip(self.chests, new_spots):
+            chest.scatter(*spot)
+        self.progress = 0
+        self.chests[0].activate()
 
     def _spawn_skull(self):
         self.phase = "skull"
         for chest in self.chests:
             chest.delete()
 
-        # dead center of the row the 3 chest slots sat on
-        first_slot, last_slot = self.chests[0].target_slot, self.chests[-1].target_slot
-        skull_x = (first_slot[0] + last_slot[0]) / 2 + 25
-        skull_y = first_slot[1] + 25
+        # dead center of the row the 3 chest slots sat on - min/max across
+        # all 3, not just chests[0]/chests[-1], since target_slot is now
+        # randomly assigned per chest (see __init__) rather than always
+        # matching each chest's own place in the solve order
+        slot_xs = [chest.target_slot[0] for chest in self.chests]
+        skull_x = (min(slot_xs) + max(slot_xs)) / 2 + 25
+        skull_y = self.chests[0].target_slot[1] + 25
         self.skull_chest = SkullChest(
             skull_x, skull_y, 50, self.batch, self.entity_group, on_open=self._spawn_gem,
         )
@@ -127,12 +209,14 @@ class TreasureState:
         self.hint_label.text = "you found it! heading back to celebrate soon..."
 
     def on_update(self, dt):
-        self.player1.update(dt, self.keys)
-        self.player2.update(dt, self.keys)
+        self.player1.update(dt, self.keys, self.tilemap.is_walkable)
+        self.player2.update(dt, self.keys, self.tilemap.is_walkable)
 
         if self.phase == "chests":
             active_chest = self.chests[self.progress]
             active_chest.update(dt)
+            if self._pointer_down_at is not None:
+                active_chest.note_still_pressed(*self._pointer_down_at)
             near = (
                 active_chest.in_range(self.player1.x, self.player1.y)
                 or active_chest.in_range(self.player2.x, self.player2.y)
@@ -167,17 +251,20 @@ class TreasureState:
             self.player1.handle_key_press(symbol)
 
     def on_mouse_press(self, x, y, button, modifiers):
+        self._pointer_down_at = (x, y)
         if self.phase == "chests":
             self.chests[self.progress].on_mouse_press(x, y)
         elif self.phase == "gem":
             self.gem.on_mouse_press(x, y)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self._pointer_down_at = (x, y)
         if self.phase != "chests":
             return
         self.chests[self.progress].on_mouse_drag(dx, dy)
 
     def on_mouse_release(self, x, y, button, modifiers):
+        self._pointer_down_at = None
         if self.phase != "chests":
             return
         self.chests[self.progress].on_mouse_release()
