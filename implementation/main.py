@@ -7,6 +7,7 @@ from entities import player_singer
 
 import pyglet
 import config
+from world import music
 from states.state_manager import StateManager
 from states.state_startmenu import StartMenuState
 from states.state_overworld import OverworldState
@@ -145,6 +146,8 @@ def main():
     if args.debug:
         create_debug_window()
 
+    music.play("assets/sound/8BitSample_Cut.mp3")
+
     print("\nstarting main loop")
     print("press ctrl+c to exit\n")
 
@@ -177,6 +180,7 @@ def main():
     finally:
         # stop threads on exit
         print("\nstopping")
+        music.stop()
         audio_input.stop_audio_stream()
         gesture_tracking.stop_tracking()
 

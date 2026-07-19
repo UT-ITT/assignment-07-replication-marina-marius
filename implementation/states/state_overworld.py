@@ -1,6 +1,7 @@
 import pyglet
 from pyglet.window import key
 import config
+from world import music
 from entities.player_singer import Player1
 from entities.player_gesture import Player2
 from world.gate import Gate
@@ -91,6 +92,7 @@ class OverworldState:
 
     def on_enter(self, **kwargs):
         self.manager.window.push_handlers(self.keys)
+        music.play("assets/sound/8BitSample_Cuterino.mp3")
 
     def on_exit(self):
         self.manager.window.remove_handlers(self.keys)

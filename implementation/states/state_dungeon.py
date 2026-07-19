@@ -3,6 +3,7 @@ import random
 import pyglet
 from pyglet.window import key
 import config
+from world import music
 from world.tilemap import TileMap
 from world.hud import ShieldHud, GunHud, HeartsDisplay, PitchLegend
 from world.interactable import Interactable
@@ -132,6 +133,7 @@ class DungeonState:
 
     def on_enter(self, **kwargs):
         self.manager.window.push_handlers(self.keys)
+        music.play("assets/sound/Dungeon.mp3")
 
     def on_exit(self):
         self.manager.window.remove_handlers(self.keys)

@@ -1,5 +1,6 @@
 import pyglet
 from pyglet.window import key
+from world import music
 from world.buttons import Button
 import config
 
@@ -53,6 +54,8 @@ class EndState:
         self._duration = 0.0
 
     def on_enter(self, won=False, **kwargs):
+        music.stop()
+
         # freeze the clock the moment we land here, don't keep ticking while
         # you're standing around reading your own score
         self._duration = self.manager.stats.elapsed()
