@@ -10,17 +10,20 @@ _animation_cache = {}
 _image_cache = {}
 
 
-def load_animation(path_prefix, frame_numbers, duration, loop, name_prefix=""):
+def load_animation(path_prefix, frame_numbers, duration, loop, name_prefix="", anchor_center=True):
     # filenames are f"{path_prefix}/{name_prefix}{n:03d}.png" - name_prefix
     # is only needed when the number isn't the whole filename (skull001.png
-    # vs projectile's plain 001.png)
-    key = (path_prefix, name_prefix, frame_numbers, duration, loop)
+    # vs projectile's plain 001.png). anchor_center=False for anything whose
+    # x/y is a bottom-left box corner elsewhere (hitboxes, AABB checks) -
+    # same reason load_image already has this flag
+    key = (path_prefix, name_prefix, frame_numbers, duration, loop, anchor_center)
     if key not in _animation_cache:
         images = []
         for number in frame_numbers:
             image = pyglet.image.load(f"{path_prefix}/{name_prefix}{number:03d}.png")
-            image.anchor_x = image.width // 2
-            image.anchor_y = image.height // 2
+            if anchor_center:
+                image.anchor_x = image.width // 2
+                image.anchor_y = image.height // 2
             images.append(image)
         _animation_cache[key] = pyglet.image.Animation.from_image_sequence(
             images, duration, loop=loop
