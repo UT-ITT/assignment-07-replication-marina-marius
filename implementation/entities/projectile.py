@@ -46,7 +46,7 @@ class Projectile:
         batch,
         group,
         owner,
-        speed=config.BULLET_SPEED,
+        speed,
         radius=config.BULLET_RADIUS,
     ):
         self.x = x
