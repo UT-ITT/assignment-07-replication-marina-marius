@@ -1,3 +1,5 @@
+# Whoamonize
+
 # Documentation
 
 This is the complete development chronicle for Assignment 7:
