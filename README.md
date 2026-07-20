@@ -34,7 +34,6 @@ Together they cross the overworld, survive a dungeon and crack a treasure-chest 
 | [`documentation.md`](documentation.md) | The full paper-selection saga, told medieval-style, plus the implementation write-up (audio/color mapping, gesture recognition, sound). |
 | [`assets/paper/`](assets/paper/) | The chosen paper (Harmonionz) and its runner-up (Color Singer). |
 | [`unchoosen_papers/`](unchoosen_papers/) | The graveyard of papers that didn't survive the "two weeks, one laptop, zero lab hardware" test. RIP paper-tearing simulation, we hardly knew ye (╥﹏╥) |
-| [`figures/`](figures/) | Documentation figures. |
 | [`Presentation.pdf`](Presentation.pdf) | The slides for the July 21st live demo. |
 | [`requirements.txt`](requirements.txt) | `numpy`, `sounddevice`, `opencv-python`, `mediapipe`, `pyglet`, `pytmx`, summon these before summoning the game. |
 | [`toDo`](toDo) | Our raw pre-showcase scratch notes, half in German, kept as-is for authenticity hehe. |
