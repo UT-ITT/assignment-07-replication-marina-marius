@@ -5,7 +5,7 @@
 > Gather round, ye weary dev, set down thy mouse and mead,<br>
 > The sagas of our battles live in scrolls ye do not need <br>
 > For **[`documentation.md`](../documentation.md)** holds the prophecy entire,<br>
-> and **[`documentation.md`](bugs.md)** the diary of every pyglet-fire.<br>
+> and **[`documentation.md`](../documentation.md)** the diary of every pyglet-fire.<br>
 > But *this* scroll here, dear traveler, is a humbler thing by far:<br>
 > just a ledger of the armory what each file is and where they are (>ᴗ•)
 
@@ -94,6 +94,6 @@ No prophecy here, no bug-haiku, no council of tutors just an honest quartermaste
 > Every file has found its shelf, every module found its rail.<br>
 > If ye seek the *why* behind it the doc and diary await,<br>
 > But if ye only seek the *where* this humble scroll's your gate.<br>
-> Now close the tab, go run `main.py`, and may your gates all glow the right hue. ⚔️(๑•̀ㅂ•́)و
+> Now close the tab, go run `main.py`, and may your gates all glow the right hue (๑•̀ㅂ•́)و
 
 _~Marius & Marina, July 2026_

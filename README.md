@@ -29,8 +29,8 @@ Together they cross the overworld, survive a dungeon and crack a treasure-chest 
 | Path | What you'll find |
 |---|---|
 | [`implementation/`](implementation/) | The actual game. Run `python main.py` from inside this folder once `requirements.txt` is installed. Start menu -> overworld -> dungeon -> treasure chamber -> end screen. |
-| [`implementation/documentation.md`](implementation/documentation.md) | Braindump on *how* the code is structured (`states/`, `entities/`, `input/`, `world/`) and *why* we split it that way. |
-| [`implementation/bugs.md`](implementation/documentation.md) | A living diary of every bug that made us swear at pyglet. Phase 1 through 3, haiku about webcam pain included free of charge. |
+| [`documentation.md`](documentation.md) | Braindump on *how* the code is structured (`states/`, `entities/`, `input/`, `world/`) and *why* we split it that way. |
+| [`implementation/bugs.md`](documentation.md) | A living diary of every bug that made us swear at pyglet. Phase 1 through 3, haiku about webcam pain included free of charge. |
 | [`documentation.md`](documentation.md) | The full paper-selection saga, told medieval-style, plus the implementation write-up (audio/color mapping, gesture recognition, sound). |
 | [`assets/paper/`](assets/paper/) | The chosen paper (Harmonionz) and its runner-up (Color Singer). |
 | [`unchoosen_papers/`](unchoosen_papers/) | The graveyard of papers that didn't survive the "two weeks, one laptop, zero lab hardware" test. RIP paper-tearing simulation, we hardly knew ye (╥﹏╥) |
@@ -77,7 +77,7 @@ A proper medieval gatekeeper never lets you through without a trial. Answer hone
 > Hover... no wait, this is markdown, there's no hover. It's **P1's voice**. Sing to it, it colors the world.
 
 **Riddle the Second:** *"Two hands make a pinch, the pinch makes a click, the click drags a crystal, but who commands the pinch?"*
-> **P2**, via mediapipe and a lot of hysteresis thresholds so the pinch stops flickering true/false like a haunted lightswitch. Ask [`documentation.md`](documentation/bugs.md) about it, it has *feelings* on the matter.
+> **P2**, via mediapipe and a lot of hysteresis thresholds so the pinch stops flickering true/false like a haunted lightswitch. Ask [`documentation.md`](documentation.md) about it, it has *feelings* on the matter.
 
 **Riddle the Third:** *"Why does the dragon guard treasure chests instead of gold?"*
 > Because gold doesn't need to be sung into the correct color first. Duh.
