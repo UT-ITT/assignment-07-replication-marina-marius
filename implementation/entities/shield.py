@@ -3,16 +3,28 @@
 # steady, 2s)
 import pyglet
 
+import audio_settings
 import config
+import pitch_color
 from entities.sprite_anim import load_animation
 from input import audio_input
+
+CRYSTAL_SOUND = "assets/sound/crystalsound.mp3"
+
+
+def play_crystal_sound():
+    # the "you sang the note long enough" chime - gate/gem/chest/shield all
+    # share this one moment, same fire-and-forget pattern as
+    # gesture_tracking's click sounds
+    player = pyglet.media.load(CRYSTAL_SOUND, streaming=False).play()
+    player.volume = audio_settings.get_sfx_volume()
 
 # the two flavors P2 can pick for P1's shield via the hud buttons
 MODE_COLOR = "color"
 MODE_SIZE = "size"
 
 # the tornado shield sprite and the projectile sprite fold their color down
-# to one of these 4 folders
+# to one of these 4 folders (index-matched to config colors)
 _COLOR_FOLDERS = ["red", "blue", "green", "yellow"]
 
 TORNADO_FRAME_DURATION = 0.06
@@ -21,15 +33,11 @@ TORNADO_SPRITE_PIXELS = 64  # source frames are 64x64, self.size scales from tha
 
 
 def frequency_bucket(frequency):
-    # squishes whatever pitch audio_input picked up into one of the SHIELD_COLORS
-    # slots exported so anything that wants "which of the 4 color buckets is
-    # this pitch in" (PitchColorLock below, the melody gate) doesn't
-    # reinvent it
-    span = audio_input.high_freq - audio_input.min_freq
-    normalized = (frequency - audio_input.min_freq) / span
-    normalized = max(0.0, min(1.0, normalized))
-    bucket = int(normalized * len(config.SHIELD_COLORS))
-    return min(bucket, len(config.SHIELD_COLORS) - 1)
+    # maps pitch to color bucket
+    note_index = pitch_color.frequency_to_note_index(frequency)
+    if note_index is None:
+        return 0
+    return pitch_color.note_index_to_bucket(note_index, len(config.SHIELD_COLORS))
 
 
 def frequency_to_color(frequency):
@@ -277,8 +285,9 @@ class Shield:
             # re-assigning it every frame would restart the idle loop nonstop
             self._folder = folder
             self.sprite.image = _tornado_idle_animation(folder)  # type: ignore
-        if self._color_pick.locked:
+        if self._color_pick.locked and not self._color_done:
             self._color_done = True
+            play_crystal_sound()
 
     def _update_size(self, dt):
         if not self.listening:

@@ -40,14 +40,18 @@ ENEMY_CONTACT_DAMAGE = 10
 # shield
 SHIELD_MIN_SIZE = 32
 SHIELD_MAX_SIZE = 96
+
+# keep order fixed
 SHIELD_COLORS = [
     (220, 60, 60, 255),
     (60, 140, 220, 255),
     (80, 200, 120, 255),
     (230, 200, 60, 255),
 ]
-
 SHIELD_COLOR_NAMES = ["Red", "Blue", "Green", "Yellow"]
+
+# center note per bucket
+SHIELD_COLOR_NOTES = ["C", "D#", "F#", "A"]
 
 PITCH_SILENCE_COLOR = (120, 120, 120)
 

@@ -6,7 +6,10 @@ import urllib.request
 import sys
 import cv2
 import mediapipe as mp
+import pyglet
 import threading
+
+import audio_settings
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from ctypes import Structure, c_double, c_int64, c_uint32, c_void_p, cdll
@@ -216,14 +219,26 @@ def check_pinch(hand_landmarks, currently_pinching=False):
     return distance < threshold
 
 
+CLICK_START_SOUND = "assets/sound/click_start.mp3"
+CLICK_END_SOUND = "assets/sound/click_end.mp3"
+
+
+def play_click_sound(path):
+    # fire-and-forget one-shot sfx
+    player = pyglet.media.load(path, streaming=False).play()
+    player.volume = audio_settings.get_sfx_volume()
+
+
 def click_via_landmark(pinching, mouse, is_left_pressed):
     if pinching and not is_left_pressed:
         mouse.press(Button.left)
         is_left_pressed = True
+        play_click_sound(CLICK_START_SOUND)
         print(f"[pinch] DOWN at {mouse.position}")
     elif not pinching and is_left_pressed:
         mouse.release(Button.left)
         is_left_pressed = False
+        play_click_sound(CLICK_END_SOUND)
         print(f"[pinch] UP at {mouse.position}")
 
     return is_left_pressed
@@ -359,6 +374,7 @@ def hand_loop(
             if is_left_pressed:
                 print("[pinch] hand lost mid-hold -> forcing UP (this drops a drag!)")
                 mouse.release(Button.left)
+                play_click_sound(CLICK_END_SOUND)
                 is_left_pressed = False
             previous_point = None
 

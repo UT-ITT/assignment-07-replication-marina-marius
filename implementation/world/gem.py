@@ -8,7 +8,7 @@ import random
 import pyglet
 
 import config
-from entities.shield import color_folder, colors_match, frequency_to_color
+from entities.shield import color_folder, colors_match, frequency_to_color, play_crystal_sound
 from entities.sprite_anim import load_animation
 from input import audio_input
 from world.gate import LOCK_HOLD_TIME, COLOR_TOLERANCE
@@ -199,6 +199,7 @@ class Gem(Interactable):
     def _lock_color(self):
         self.colored = True
         self.listening = False
+        play_crystal_sound()
         self._set_folder(self.target_folder)
         if self.target_slot is None:
             self.solved = True

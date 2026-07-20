@@ -5,7 +5,7 @@
 import pyglet
 
 import config
-from entities.shield import color_folder, colors_match, frequency_to_color
+from entities.shield import color_folder, colors_match, frequency_to_color, play_crystal_sound
 from entities.sprite_anim import load_animation, load_image
 from input import audio_input
 from world.gate import LOCK_HOLD_TIME, COLOR_TOLERANCE
@@ -234,6 +234,7 @@ class Chest(Interactable):
     def _lock_color(self):
         self.colored = True
         self.listening = False
+        play_crystal_sound()
         self.sprite.image = _chest_color_image(self.target_folder)
         self.hint_label.text = "P2: click/pinch + drag it onto its marked spot"
 

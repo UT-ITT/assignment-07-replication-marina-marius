@@ -3,10 +3,10 @@ import time
 import argparse
 from input import audio_input
 from input import gesture_tracking
-from entities import player_singer
 
 import pyglet
 import config
+import pitch_color
 from world import music
 from states.state_manager import StateManager
 from states.state_startmenu import StartMenuState
@@ -105,7 +105,8 @@ def update(dt):
     # Audio input
     freq = audio_input.current_frequency
     debug_pitch = freq
-    debug_color = player_singer.pitch_to_color(freq)
+    # true note color, unsnapped
+    debug_color = pitch_color.frequency_to_note_color(freq, config.PITCH_SILENCE_COLOR)
     # Gesture input
     cx = gesture_tracking.cursor_x
     cy = gesture_tracking.cursor_y

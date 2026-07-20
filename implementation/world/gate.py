@@ -10,6 +10,7 @@ from entities.shield import (
     colors_match,
     frequency_bucket,
     frequency_to_color,
+    play_crystal_sound,
 )
 from entities.sprite_anim import load_animation, load_image
 from input import audio_input
@@ -226,6 +227,7 @@ class Gate(Interactable):
     def _lock(self):
         self.locked = True
         self.listening = False
+        play_crystal_sound()
         self.sprite.image = _gate_loop_animation(self.target_folder)
         if self.walk_in_required:
             self.hint_label.text = "P1 & P2: both walk into the gate to go through!"

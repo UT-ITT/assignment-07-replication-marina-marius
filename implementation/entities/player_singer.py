@@ -5,26 +5,6 @@ import config
 from entities.grid_actor import GridActor
 
 
-def pitch_to_color(pitch):
-    min_pitch = 100
-    max_pitch = 1000
-    steps = 8
-
-    normalized_pitch = (pitch - min_pitch) / (max_pitch - min_pitch)
-    normalized_pitch = max(0.0, min(1.0, normalized_pitch))
-
-    # snap to one of a fixed number of steps instead of a smooth gradient,
-    # so small pitch jitter while singing doesn't constantly shift the color
-    bucket = min(int(normalized_pitch * steps), steps - 1)
-    stepped_pitch = bucket / (steps - 1)
-
-    r = int(stepped_pitch * 255)
-    g = 0
-    b = int((1 - stepped_pitch) * 255)
-
-    return (r, g, b)
-
-
 class Player1(GridActor):
 
     def __init__(self, x, y, batch, group, shield=None, collision_scale=None):
