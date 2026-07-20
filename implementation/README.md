@@ -1,284 +1,97 @@
-your implementation goes here
-
-# braindump
-
-## why the files inflation?!
-since a lot of code is being duplicated and its better to have own files for stuff for debugging purposes, structure and clean code (not like last assignment, it hurt really my soul but for 4 points I wouldn't split everything .... but for 25?! HELL YEAH)
-
-once the file count crept past 15 flat files, we grouped them into packages so the folder is still readable at a glance instead of one giant BUCHSTABENSUPPE list:
-- `states/`: the 5 screens + `state_manager.py`, which does the actual switching between them
-- `entities/`:things that act every frame: players, enemy, shield
-- `input/`: the raw device readers (audio_input.py, gesture_tracking.py), no game logic, just exposes current values
-- `world/`: everything the map contains or displays: tilemap, gate, interactables, hud, buttons
-
-advantages:
-- **overview**: `ls` on `implementation/` now shows 4 folders + `main.py` + `config.py` instead of 20 files mixed together
-- **grep-ability**: "where's the enemy logic" -> `entities/`, no guessing between 20 flat filenames
-- **import clarity**: `from world.gate import Gate` tells you exactly what kind of thing you're pulling in, a bare `from gate import Gate` doesn't
-- **merge conflicts**: two people working on e.g. `states/state_dungeon.py` and `entities/enemy.py` almost never touch the same file by accident
-
-the `__init__.py` files in each package are (currently) just a super fancy comment. The files makes Python treat `states/`, `entities/`, `input/`, `world/` as importable packages (`from states.state_manager import ...`) instead of just random folders. They don't need any code in them to work, we just used them to document what each package is for (did this so it doesn't look thaaat empty haha).
-
-## screens
-(logic mostly copied from Assignment 6 (gesture_application Melanie & Marina) and then duplicated into corresponding files since everything is kinda the same)
-0: Start menu (continue by P2 clicking a button and P1 coloring the button) like a tutorial
-1: In the world and you have to get to the dungeon gate and open it
-2: Inside the dungeon with the enemies
-3: Outside the dungeon at the treasury (solve puzzle)
-4: Game over or game won screen (is displayed depending on where you die or after 3 if passed)
-
-# BUG ALARM *wiu wiu wiu*
-
-A living diary of everything that made us swear at pyglet while building out the game (start menu -> overworld -> dungeon -> treasure chamber -> end screen, phases 1 through 3, plus whatever broke in between while actually playtesting it). In the same spirit as the README: braindump, not a bugtracker with tickets. (ง -_-)ง
-
-## Phase 0: Prepstage
-
-## nowhere sprites 
-Sooo a problem we encountered was how to use tilemaps. Since in e.g. unity you have a Tilemap editor (just load your stuff in in the right format and voila you can "draw" your map as you wish and put "objects" in and collision etc.). We totally forgot that we use pyglet ._.
-
-So we searched in the world wide webs and came across this gem: https://www.mapeditor.org
-
-> "Tiled is a 2D level editor that helps you develop the content of your game. Its primary feature is to edit tile maps of various forms, but it also supports free image placement as well as powerful ways to annotate your level with extra information used by the game. Tiled focuses on general flexibility while trying to stay intuitive."
-
-And with that we solved our Tilemap problem, only problem left is to learn how to use it ._. 
-
-**bug alarm**
-
-WHY WHY WHY 
-
-so apparently when you have infinite on than pyglet cant handle that, but nuh uuuuh I needed to uncheck it in titled but that would be too easy (something with the sprite layout was wrong so it took 30 minutes to fix that with shitty random online threads) and in the end the creater of the tiles was just to lazy to put water tiles under the wave tiles so e colored random tiles that were not in the layer and thats why i couldnt select the whole map shift the offset just to uncheck infinite and use it in pyglet
-
-lesson learned -> using a real game engine with sprite editor in future no more pyglet
-
-+ because of ratio I added left and right on each side 6 additional tile columns ._.
-
-## Phase 1: Start Menu + Overworld
-
-(Filled in as we actually hit things, not written in advance like some kind of liar hehe)
-
-### The gesture cursor lies to you
-`gesture_tracking.py`'s `cursor_x`/`cursor_y` are camera-frame coordinates dressed up as screen coordinates, NOT pyglet-window coordinates. If you naively compare them against a button's pixel position you will hit things that aren't there and miss things that are. 
-**The Fix:** Don't touch `cursor_x`/`cursor_y` at all for hit-testing. The pinch already drags a real OS mouse cursor and does a real OS click, so pyglet's own mouse events already arrive in correctly-mapped window coordinates for free. Moral of the story: let the OS do the coordinate math, it's better at it than we are (╥﹏╥)
-
-### "Click and drag" is one word away from being free
-Turns out pyglet's `on_mouse_drag` only fires while a button is physically held, which is exactly what a held pinch produces. So `Pushable` didn't need any custom gesture-drag-detection logic, it just listens like a bog standard mouse drag and gets pinch support as a side effect. Found this out completely by accident.
-
-### A Haiku About Webcam Pain (Yes, a literal haiku so you get the joke)
-*Webcam will not start*<br>
-*Five times I open the port*<br>
-*Now it hates me, great*<br>
-
-**The bug:** "Before phase 2 our webcam doesn't start at all". We noticed our `gesture_tracking.py` was scanning camera indices, opening and releasing each one just to see if it exists, then double-checking, then opening a *third* time for the tracking thread. We were doing up to 5+ real `AVFoundation` capture-session open/release cycles back to back. AVFoundation's session teardown isn't instant, so slamming it leaves the camera in a "nope, not now" state. Classic case of "it works" ≠ "it works when you do it five times in a row real quick".
-**The Fix:** Ripped out the scanning and confirm-reopen entirely. `select_camera()` now just asks for an index (default 0) and returns it, opening the camera exactly once.
-
-### The pinch that clicked absolutely nothing
-**The bug:** Terminal happily prints `pinch=True` when you pinch, but nothing happens in the game. Turns out `hand_loop()` maps the hand landmark into screen coordinates using a hardcoded 1920x1080 canvas glued to the top-left corner of the desktop (0, 0). Our game window definitely wasn't at (0, 0). The click was real, but it landed on phantom coordinates.
-**The Fix:** `hand_loop()` now takes `origin_x`/`origin_y` in addition to `window.width`/`window.height`. We feed it `window.get_location()` so it knows where the actual game is.
-
-## Phase 2: Dungeon Combat 
-
-### A shield glued to the dungeon's center tile
-`shield.py` originally just planted itself at a fixed center coordinate and never moved again. P1 could be standing in a corner and the shield would still be chilling in the middle of the room doing absolutely nothing for them. Added `Shield.follow(x, y)` and called it every frame with P1's position. 
-
-### "C is P2's key" needs to be true at the routing level
-P2's gun toggle (`C`) was quietly funneling straight into `Player1.handle_key_press`, vanishing into a no-op with zero feedback. Gave `Player2` its own handler and split the dispatch explicitly. Failing silently is the worst kind of bug to chase later. Update 2: we changed (`C`) to (`L`) since it would be to much hassle (an understatement because it was freaking annoying haha) for P1 to also initiate that so P2 now does it themselves.
-
-### Testing bullets through obstacles is a coin flip
-Our P2-shoots-an-enemy test kept failing. Spent a bit convinced our math was wrong before realizing the bullet died exactly on top of a static obstacle block. Not a bug, just a test that accidentally drew a straight line through a wall. Moved the obstacles out of the way for that test.
-
-### An already-dead bullet trying to update itself
-Call `Projectile.destroy()` and then call `.update(dt)` before it's filtered out of the list and pyglet throws an `AttributeError` because the vertex list is gone. Cheap fix: `update()` just returns immediately if `self.alive` is already `False`.
-
-### P1 quietly redecorating itself
-**The bug:** `Player1.update()` had leftover code that changed P1's color based on audio pitch. Once `Gate` and `Shield` got their own live-color tracking, nothing looked at P1's color anymore. It just kept flickering through the palette purely so anyone watching could go "wait why is P1 changing colors, nothing's even nearby". 
-**The Fix:** Deleted the audio-reactive line and unused imports. P1's rectangle is just `config.P1_COLOR` now, full stop.
-
-### Hint labels assuming you already knew who does what
-Strings like "sing its color" or "drag the crystal" are completely ambiguous when two players are staring at one screen. Every one of those strings now explicitly says `P1:` or `P2:` up front.
-
-### "Hardcoding the easy note" made things harder
-We thought forcing the tutorial to use the lowest frequency bucket (`config.SHIELD_COLORS[0]`) would be a nice gimmick so P1 wouldn't have to hunt for a high note. EXCEPT that lowest bucket is 500-1125Hz, which is actually kind of high for natural speaking voices. Forcing literally every single attempt to require exactly that one bucket meant if it was your worst range, you were stuck every single time.
-**The Fix:** Reverted to `random.choice(config.SHIELD_COLORS)`. 
-
-### The button/gate that never said what to sing
-Players had to reverse-engineer the target purely from a live-updating swatch with no label and it would look "stuck" on a color instead of honestly saying "nothing detected right now" when P1 stopped singing. Added `config.SHIELD_COLOR_NAMES` so text hints can say "P1: sing GREEN", and resetting the color to a shared gray (`PITCH_SILENCE_COLOR`) when nothing is detected.
-
-### The tornado that only span up because macOS wasn't looking closely enough
-Found this one doing a full-repo audit. Code loaded frames from `"assets/tornado/"` (lowercase), but the folder on disk was `assets/Tornado` (capital T). APFS (macOS's default filesystem) is case-insensitive, so it worked fine for us. It would have hard-crashed the moment this ran on Linux.
-**The Fix:** Pointed the calls to the real casing, `assets/Tornado`.
-
-### The gate gets a sprite and preps for melody
-The gate finally got a looping sprite instead of rendering off a base rectangle. Also left the color-matching logic behind a clean `_lock()` method so Marius can swap it for a short sung note sequence check later without breaking everything downstream.
-
-### The entry gate that ate itself
-**The bug:** Walking into the dungeon's entry crystal to start the fight threw an `AttributeError`. If P2 had already walked in, and then P1's entry completed the pair, `Gate.try_enter` fired `on_unlock` synchronously. `_start_combat` sets `self.gate = None` immediately, but the very next line then tried to call `self.gate.try_enter` on nothing.
-**The Fix:** Read `self.gate` into a local variable once at the top and use that local for every call in the block instead of re-reading `self.gate` after each one.
-
-### Walking into an unlocked gate did nothing
-We required pixel-perfect overlap between the player's bottom-left corner and the gate's pixel box. Players only ever step in 64px jumps, so exactly *one* tile satisfied that point check. Missing it by even one step meant walking straight through the gate forever. Swapped the point check for an actual rect-vs-rect overlap.
-
-### The crystal isn't a door
-The dungeon's entry crystal quietly inherited the walk-in-together mechanic from doors. Gave `Gate` a `walk_in_required` flag. When `False`, coloring it triggers the unlock immediately.
-
-### The gem stopped freezing mid-sing, and learned to be dragged
-Gems froze on a single frame while listening to P1 sing. Rewrote it to swap looping color folders. Also bolted on `Chest`'s drag pattern, so coloring it unlocks dragging.
-
-### Pinching could click a gem but couldn't drag it (Rounds 1 & 2)
-Holding a pinch to drag did absolutely nothing. macOS treats a moved-while-button-down cursor as `kCGEventLeftMouseDragged` (type 6), but we were constantly posting plain `kCGEventMouseMoved`. `on_mouse_drag` literally never fired. 
-**Fix 1:** Swapped to posting the proper event type.
-**Fix 2:** The drag event fired, but always carried `delta=(0,0)`. Synthetic OS events don't carry native deltas, so we explicitly computed and injected `delta_x`/`delta_y` into the event fields.
-
-### P1 and P2 stopped being plain colored squares
-Real 16x20 pixel-art sprites landed! `GridActor` now loads idle and walk cycle frames based on the current movement direction. P2's pinch-highlight lost its old brightness trick and now drops the blue channel so it doesn't wash out the art.
-
-### The overworld got walls
-Added real per-tile collision via Tiled's `blocks` layer. Almost blocked the whole map initially because the `water` layer was a full-map base layer sitting underneath all the land. Had to search for new nearest-open-spots for all hardcoded spawns/gems because they landed inside solid walls.
-
-### Tilemap animations
-Animated tiles (fire, water) only showed their first static frame. Built a `pyglet.image.Animation` cached per-gid so they actually loop forever now. 
-
-### Dungeon collision, capped enemies, right-sized players
-Players looked oversized, so we shrank `PLAYER_RENDER_SCALE` down to 0.5. Gave the dungeon real wall collision too, which immediately ate our hardcoded bullet obstacles. Capped combat enemies at exactly 3 instead of randomly rolling up to 10.
-
-### The enemy stopped being a colored square too
-Enemies are now an animated 4-frame flying bat loop. Had to pass `anchor_center=False` to the animation loader because the physics hitboxes are bottom-left anchored, otherwise hits would visually miss.
-
-### Bullets never actually knew the dungeon had walls
-Bullets flew straight through actual stone walls that players couldn't cross. `_resolve_bullets` now checks `self.tilemap.is_walkable()` against a box centered on the bullet. 
-
-### The collision box was the size of the tile
-Players kept getting stuck even on walkable tiles because the 64px invisible box was huge compared to the tiny 16x20 sprite. Shrank the collision box down to match the real character's rendering dimensions.
-
-### Shield loses its stopwatch, gun learns to sing
-Cut the shield's duration timer entirely. Now it just tracks a `_size_peak` for 3 seconds. Also gave the gun the exact same hold-steady-for-2s color-locking treatment as the shield instead of its old manual toggle.
-
-### One bullet speed wasn't enough
-Split `config.BULLET_SPEED` into `PLAYER_BULLET_SPEED` and `ENEMY_BULLET_SPEED` so P2 shoots faster than what's coming back at them.
-
-### The missing floor tiles were never a Tiled problem
-Marius noticed `earth_floor` tiles missing. Not a Tiled bug, just Pyglet batching sprites from the same texture together with zero draw order, causing layers to interleave randomly. Created distinct ordered child groups for every layer.
-
-### P2's gun was secretly a hitscan-on-enemy click
-The gun wasn't free-aiming. It looped every enemy and only fired if the pinch landed *exactly* inside a hitbox rect. Dropped the loop and just let P2 shoot a projectile aimed straight at the clicked point.
-
-### The gate needed multiple pinches
-The gate visibly jumped 30px when clicked. The idle loop was center-anchored, but the listening image was bottom-left anchored. So the *rendered* gate drifted away from its invisible click target. Fixed anchors so `sprite.x/y` are identical across states.
-
-### Bullets now actually point where they're going
-Stole the `atan2` math from the Steering Law assignment to rotate sprites toward their travel direction. Just had to reverse it for Pyglet's y-up space (`-degrees(atan2(vy, vx))`).
-
-### Unwinding Group 1 one layer at a time
-Split the dungeon collision into 4 specific named layers (`walls_top`, `walls`, etc.), which forced us to move yet another hardcoded obstacle that got swallowed by `walls_back`.
-
-### Gate walk-in box shrinkage
-Used the new `collision_box()` for gate entries so players don't trigger the walk-in from 55px outside the sprite.
-
-### The shield's pinch-to-listen step was missing entirely
-You couldn't drag the shield after changing colors. The real bug was that the shield needed a `listening` flag so P1 screaming before P2 pinched it would do nothing. You now have to explicitly pinch to arm it before singing.
-
-## Phase 3: Treasure Chamber + End-State Metrics
-
-### Deciding what counts as a "pitch attempt"
-Defined one "attempt" as one sample per frame where P1 is actively singing during a *real* color-match check (Gate/Chest locks). The Shield and Gun were left out since they just live-track with no fixed target.
-
-### The chest slot markers are fully transparent
-The chest markers were drawn with an `(0,0,0,0)` color fill. Just flagged it for review before assuming it looks right.
-
-### The treasure chamber finally gets its own room
-Swapped the flat rectangle background for an actual `treasure.tmx` tilemap. Moved the 3 target slots directly in front of the fenced dragon, left-to-right.
-
-### The slot markers were the last spoiler
-Slot markers were drawn in the chest's actual `target_color`. We swapped them to a flat black outline so they only say "a chest goes here", forcing you to actually sing to find the answer.
-
-### Colors weren't actually random
-We randomized chest colors, which meant two chests could easily share a color. That broke the puzzle logic because the solve order assumed the first chest physically lived on the left. Added an independent shuffle for the slots too. 
-
-### Snapping into place was itself the tell
-A chest only snapped when dropped near its *correct* slot. Drop it anywhere else and nothing happened. That basically told you the answer immediately without actually guessing.
-**The Fix:** Chests now snap to *any* marked slot when dropped close enough, right or wrong. If it's the wrong slot, `_reset_wrong()` bounces the chest back to its spawn point, uncolored, and P1 has to sing it all over again like a peasant.
-
-### Dragging after coloring didn't work if the pinch never let go
-**The bug:** Pinch and drag didn't work right after a chest's color locked in. `on_mouse_press` only set `grabbed = True` if the chest was *already* colored when the press event fired. If you hold the pinch continuously while singing, there is no second press event, so `grabbed` never flips.
-**The Fix:** Added `Chest.note_still_pressed(x, y)`. If the chest just locked its color, isn't grabbed, and the point is still inside it, it auto-grabs it right then instead of waiting for a press event that a continuous hold will never produce.
-
-### The reveal waits for all 3
-Instead of telling you immediately if a chest drop was correct, you have to place all 3 chests first. If any are wrong, it scatters the whole group to new random coordinates.
-
-### The start/end screens Downloads landmine
-**The bug:** `startscreen.tmx` and `endscreen.tmx` crashed on load with a `FileNotFoundError` pointing to `../../../../../Downloads/...`. Tiled saves image paths relative to where the `.tmx` lived at the time. These two were clearly built straight out of a Downloads folder and the PNGs never moved over. It would have broken instantly for anyone else. Dataset drama making a comeback!
-**The Fix:** Copied the 20 distinct images into `assets/chamber/` and rewrote the paths down to plain filenames.
-
-### One font, everywhere
-Forced everything to use `Play-Regular.ttf`. Also shoved the Start/End screen buttons down to `y=100` so they aren't awkwardly sitting on top of everything else.
-
-### Player collision shrunk again & Shield continuous grab
-Shrunk the player collision box again to exactly 19.2x19.2 across all maps regardless of scale. Also applied the exact same continuous-hold `note_still_pressed` fix we built for `Chest` to the `Shield`. 
-
-### Quick.py
-Added a small `quick.py` script to directly load states (like `treasure`) so we can skip the start menu and dungeon walk cycles during testing. This script felt so liberating because we just wanted to see if e.g. the tilemap looks good and needed to do eeeeeverything again and again and again.... now we got PTSD
-
-### dungeon.tmx's "3 blank spots"
-Spent forever investigating 3 "blank spots". Turns out there were no missing tiles; it was just a deliberate stylistic choice to use clean `Floor` tiles in the boss room instead of the speckled `earth_floor`. There are still 3 spots that swapped the location after "ficing" it but I cant seem to find them maybe Monday is a better day :(
-
-### Shield buttons renew, not retire
-Buttons originally became permanently disabled one-shots after locking. Rewrote it so P2 can pinch the button again to redo the scream/sing window instead of being locked out forever.
-
-### Treasure chest puzzle: right guesses stick now
-Scattering *every* chest back to square one on a wrong guess made it impossible if chests had duplicate colors. Changed the logic to permanently lock-in any chest placed in its correct slot, only scattering the wrong ones (as it should be like some fixes ago but because of changing stuff it broke and needed to be fixed again).
-
-### Dungeon combat cleanup & Gem deletion crash
-Mid-flight enemy bullets would just freeze in the air when the phase flipped to cleared. We added cleanup to destroy them properly.
-*However*, deleting the start-combat gem synchronously inside `on_update` caused an immediate `AttributeError` on the very next line because `self.gem` was suddenly `None`. We had to add fresh `is not None` guards to protect mid-frame self-deletions.
-
-
-# Sources
-
-## assets
-- dungeon: https://free-game-assets.itch.io/free-2d-top-down-pixel-dungeon-asset-pack
-- chapell: https://craftpix.net/download/100511/
-- dungeon2: https://craftpix.net/download/80859/
-- ruin: https://craftpix.net/download/107610/
-- https://kenney.nl/assets/tiny-dungeon
-- https://opengameart.org/content/gem-icons-0
-- projectiles: https://pimen.itch.io/magical-animation-effects?__cf_chl_tk=WPC4MVda3nuvSvSu0.jML0moKodloZaz7RZJ98iUr3Y-1784286481-1.0.1.1-W2BH6zjARJbeqOtL_VRFk_JVZhwMaEBySsNUOToDago
-- tornado: https://foozlecc.itch.io/pixel-magic-sprite-effects
-- characters: https://zerie.itch.io/tiny-rpg-character-asset-pack
-https://oboropixel.itch.io/characters-animations-asset-pack?download
-https://pixelserial.itch.io/rpg-top-down-character-asset-pack?download
-- player: https://farm-animal.itch.io/character-pack
-enemies + dungeon: https://pixel-poem.itch.io/dungeon-assetpuck
-controller + keyboard: https://vryell.itch.io/controller-keyboard-icons
-- treasure: https://pixelserial.itch.io/rpg-pixel-art-chests/download/eyJpZCI6MzQyNzI1OCwiZXhwaXJlcyI6MTc4NDI5NDIzNn0%3d%2evmdwQ1cZ2frwB%2bsrXRcKRwwKGOg%3d
-- gems: https://drxwat.itch.io/pixel-art-diamond
-- portal/gate: https://pixelnauta.itch.io/pixel-dimensional-portal-32x32/download/eyJpZCI6MjM5NDE0MSwiZXhwaXJlcyI6MTc4NDMwMjM2OH0%3d%2e5aRHN0Nm0omOx%2bKZBr5Z0mqdhBQ%3d
-- bat: https://purplecatgamestudio.itch.io/bootiful-beasts?download
-
-Our best friend for sprite cutting:
-- https://ezgif.com/sprite-cutter?err=expired
-
-Since some assets weren't pre cut and of course Tiled was not intuitive (and honestly we didn't want to invest to much time for that to learn Tiled perfectly) we did what all great developers do: We googled 
-<br>
-online free sprite cutter
-<br>
-This was easy and intuitive to use:
-1. Select "Sprite sheet cutter"
-2. Upload Image
-3. Select cutting Method "By number of columns/rows
-4. Insert those numbers by counting (obviously)
-5. Click Cut
-6. Then export it!
-
-This saved us sooooo much time since we have so much sprites haha
-
-
-
-DISCLAIMER:
-> As you can see (while looking at the sources) some sprites have multiple colors (red, green, blue, yellow) and may even differ from the original. You probably think nothing about it but We'll tell you anyways! So we used of course a not piratted version of Lightroom to change the colors into the colors of our pitches.
-
-This was relatively easy since:
-1. Import all Sprites to super fully legal Lightroom copy
-2. Go into Develop Settings
-3. Do some color Theory magic on one image
-4. Select all images (first the already color graded one)
-5. Apply synchronize (now all have the same color grading)
-6. Export it to the choosen folder (IMPORTANT as PNG for transparent background!!)
+# The Tavern Song of the Quartermasters Ledger
+
+*(sung to whatever tune you like, the bard never wrote one down)*
+
+> Gather round, ye weary dev, set down thy mouse and mead,<br>
+> The sagas of our battles live in scrolls ye do not need <br>
+> For **[`documentation.md`](../documentation.md)** holds the prophecy entire,<br>
+> and **[`documentation.md`](bugs.md)** the diary of every pyglet-fire.<br>
+> But *this* scroll here, dear traveler, is a humbler thing by far:<br>
+> just a ledger of the armory what each file is and where they are (>ᴗ•)
+
+No prophecy here, no bug-haiku, no council of tutors just an honest quartermaster's inventory of every file in `implementation/`, grouped by what part of the kingdom it belongs to, so "where's the enemy logic" takes you three seconds instead of thirty.
+
+---
+
+## The Root Chamber: top-level files
+
+| File | What it does |
+|---|---|
+| `main.py` | The throne room. Boots the window, wires up audio/gesture input threads, registers all 5 states with the `StateManager`, runs the game loop. |
+| `config.py` | The royal rulebook: every shared constant (window size, colors, speeds, hitboxes, pitch buckets) lives here so tuning happens in one place instead of five. |
+| `pitch_color.py` | The Harmonionz spell itself: maps a raw frequency to a note and a color bucket. Core interaction technique lives here. |
+| `audio_settings.py` | Shared music/SFX volume state, with a tiny listener system so sliders can live-update playing sound. |
+| `quick.py` | The teleportation scroll: jump straight into any state (e.g. `treasure`) for testing without replaying the whole quest every time. |
+| `idea.md` | The original design doc / game-mechanics table written before a single line of code existed. |
+| `hand_landmarker.task` | Mediapipe's pretrained hand-landmark model file, not code, just the crystal ball itself. |
+| `assets/` | Every sprite, tile, sound and font the kingdom uses. |
+
+---
+
+## `states/`: The Five Halls (screens)
+
+| File | What it does |
+|---|---|
+| `state_manager.py` | The castle steward: holds whichever screen (0–4) is currently active and handles switching between them. |
+| `state_startmenu.py` | Hall 0: the tutorial: P2 clicks the start button, P1 sings it the right color to advance. |
+| `state_overworld.py` | Hall 1: walk-around world, leads to the dungeon gate. |
+| `state_dungeon.py` | Hall 2: combat: enemies, shield, gun, projectiles. |
+| `state_treasure.py` | Hall 3: the chest-coloring puzzle outside the dungeon. |
+| `state_end.py` | Hall 4: game over / game won screen with run stats. |
+| `game_stats.py` | The scoreboard that survives every `set_state()` call (lives on the manager, not any one screen): tracks time played, pitch accuracy, shots fired. |
+
+---
+
+## `entities/`: The Living Things
+
+| File | What it does |
+|---|---|
+| `grid_actor.py` | Shared "walk exactly one tile, then wait" movement (Pokémon-style stepping) used by both players. |
+| `player_singer.py` | P1: WASD to walk, E to interact, F to summon the shield. |
+| `player_gesture.py` | P2: arrow keys to walk, hand-tracking does the pinch/click/drag. |
+| `enemy.py` | Enemy spawning, animated bat sprite, projectile-firing AI. |
+| `projectile.py` | Bullets (enemy and player), straight-line flight, wall/hit collision. |
+| `shield.py` | P1's shield: grows with volume, changes color with a held pitch, blocks matching-color bullets. |
+| `gun.py` | P2's gun: toggled with `L`, colored the same way the shield is, free-aims at the clicked point. |
+| `sprite_anim.py` | Shared helper: load N numbered PNG frames into a cached, centered `pyglet.image.Animation`. |
+
+---
+
+## `input/`: The Sensory Organs
+
+| File | What it does |
+|---|---|
+| `audio_input.py` | Reads the microphone, extracts live frequency/volume: no game logic, just exposes current values. |
+| `gesture_tracking.py` | Runs mediapipe hand tracking, turns a detected pinch into a real OS mouse click/drag. |
+
+---
+
+## `world/`: The Realm Itself
+
+| File | What it does |
+|---|---|
+| `tilemap.py` | Loads and renders the 3 `.tmx` maps (overworld, dungeon, treasure chamber), plus collision/walkability checks. |
+| `interactable.py` | Base class for anything P1/P2 can interact with: one mother-class instead of copy-pasted logic per object. |
+| `gate.py` | Color-matched (or melody-matched) crystal gates that unlock doors and start combat. |
+| `gem.py` | Sing-to-color, drag-to-slot object: same trick as `gate.py`/`chest.py` on an animated sprite. |
+| `chest.py` | Treasure chamber chests: sing the right color, drag onto the marked slot, solved. |
+| `hud.py` | The dungeon overlay: buttons P2 clicks to pick what P1's voice currently controls. |
+| `buttons.py` | Generic clickable button widgets used across screens. |
+| `music.py` | One shared looping background-music player, swaps tracks cleanly between states. |
+
+---
+
+## One riddle for the road
+
+*"I have five halls but no doors of my own, I am consulted before every journey, yet I never joins the quest myself. What am I?"*
+> This very file. A map is not the territory, dear reader go play the actual game in `main.py`. (◕‿◕✿)
+
+---
+
+## 🍺 Outro: Last Call at the Tavern
+
+> So raise your mug, o weary coder, the ledger's told its tale,<br>
+> Every file has found its shelf, every module found its rail.<br>
+> If ye seek the *why* behind it the doc and diary await,<br>
+> But if ye only seek the *where* this humble scroll's your gate.<br>
+> Now close the tab, go run `main.py`, and may your gates all glow the right hue. ⚔️(๑•̀ㅂ•́)و
