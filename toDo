@@ -8,14 +8,14 @@ yes! lass 4 farebn nur machen gelb grün rot blau vorerst und das könnenw ir er
 am besten so das finetuning von parametern immer wie tunnhöhe und gesture solange ich alles reinklatsche
 
 still open todos:
-- anpassung start screen
-- buttons (kann man so lassen erstmal oder??)
-- anpassung end screen
-- skip für showcase
-- collision bats
-- mouse cursor sprite change (size bigger)
-- pinching checking + sound feedback klick + visual feedback???
-- audio
-- sprites in dungeon
-- update complications -> use extern microphone 
-- scaling fullscreen (the absolut last thing todo)
+- anpassung start screen (done)
+- buttons (kann man so lassen erstmal oder??) (not needed)
+- anpassung end screen (done)
+- skip für showcase (done)
+- collision bats (done)
+- mouse cursor sprite change (size bigger) (for future)
+- pinching checking + sound feedback klick + visual feedback??? (done)
+- audio (done)
+- sprites in dungeon (defeat)
+- update complications -> use extern microphone  (done)
+- scaling fullscreen (the absolut last thing todon only mac problem)
