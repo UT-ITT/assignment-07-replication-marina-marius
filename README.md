@@ -93,4 +93,4 @@ And so, dear reader, tutors, classmate, or future-us doing spring cleaning. This
 
 Thus concludes the chronicle. Go forth, run `main.py`, sing badly, pinch confidently and may your shield always be the right color when the bullet arrives. (๑•̀ㅂ•́)و✧
 
-_~ Marius & Marina, July 2026_
+_~Marius & Marina, July 2026_

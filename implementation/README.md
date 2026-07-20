@@ -95,3 +95,5 @@ No prophecy here, no bug-haiku, no council of tutors just an honest quartermaste
 > If ye seek the *why* behind it the doc and diary await,<br>
 > But if ye only seek the *where* this humble scroll's your gate.<br>
 > Now close the tab, go run `main.py`, and may your gates all glow the right hue. ⚔️(๑•̀ㅂ•́)و
+
+_~Marius & Marina, July 2026_

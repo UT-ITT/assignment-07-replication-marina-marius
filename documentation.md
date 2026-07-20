@@ -480,4 +480,4 @@ None of the curses above stop the core interaction technique from working pitch-
 
 And so, dear reader, this concludes the chronicle of our two-week quest: from a pile of 10 candidate scrolls, through a prophecy that split into two, down to a kingdom of singing crystals and pinching heroes. May your webcam start on the first try and may your shield always be the right color when the bullet arrives.
 
-_~ Marina & Marius, July 2026_
+_~Marius & Marina, July 2026_
