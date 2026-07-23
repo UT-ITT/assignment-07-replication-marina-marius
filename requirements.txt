@@ -1,0 +1,6 @@
+numpy
+sounddevice
+opencv-python
+mediapipe
+pyglet
+pytmx
